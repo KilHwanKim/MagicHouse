@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcane Archive - AI 마법 서재</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&display=swap');
+
+        :root {
+            --magic-purple: #6b46c1;
+            --magic-gold: #ecc94b;
+            --deep-night: #1a1b26;
+        }
+
+        body {
+            font-family: 'Noto Serif KR', serif;
+            background: radial-gradient(circle at center, #1e1e2e 0%, #0f0f1a 100%);
+            color: #e2e8f0;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* 마법 같은 배경 애니메이션 */
+        .magic-dust {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            background-image: radial-gradient(circle, #fff 1px, transparent 1px);
+            background-size: 50px 50px;
+            opacity: 0.1;
+            animation: moveDust 20s linear infinite;
+            z-index: 0;
+        }
+
+        @keyframes moveDust {
+            from { background-position: 0 0; }
+            to { background-position: 500px 1000px; }
+        }
+
+        /* 질문 카드 플로팅 애니메이션 */
+        .floating-card {
+            animation: float 4s ease-in-out infinite;
+            background: rgba(30, 30, 50, 0.7);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(177, 156, 217, 0.3);
+            box-shadow: 0 0 30px rgba(107, 70, 193, 0.2);
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(0.5deg); }
+        }
+
+        /* 3D 책 디자인 */
+        .grimoire {
+            width: 60px;
+            height: 180px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            border-radius: 4px 8px 8px 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            writing-mode: vertical-rl;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            box-shadow: -8px 5px 15px rgba(0,0,0,0.4);
+        }
+
+        .grimoire::after {
+            content: '';
+            position: absolute;
+            left: 8px; top: 0; bottom: 0; width: 2px;
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+        }
+
+        .grimoire:hover {
+            transform: translateY(-25px) rotateY(-15deg) scale(1.1);
+            filter: brightness(1.2);
+            box-shadow: 15px 15px 30px rgba(0,0,0,0.5);
+            z-index: 50;
+        }
+
+        /* 서재 선반 효과 */
+        .shelf-plate {
+            height: 12px;
+            background: linear-gradient(to bottom, #3e2723, #1b0a0a);
+            border-radius: 4px;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.6);
+            position: relative;
+            z-index: 10;
+        }
+
+        /* 커스텀 버튼 */
+        .magic-btn {
+            transition: all 0.3s;
+            background: linear-gradient(135deg, #6b46c1 0%, #44337a 100%);
+            border: 1px solid rgba(236, 201, 75, 0.4);
+        }
+
+        .magic-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(236, 201, 75, 0.6);
+            border-color: #ecc94b;
+        }
+
+        /* 모달 오버레이 */
+        .modal-blur {
+            display: none;
+            backdrop-filter: blur(8px);
+            background: rgba(0,0,0,0.8);
+            transition: opacity 0.3s;
+            z-index: 100;
+        }
+
+        .book-open-anim {
+            animation: bookOpen 0.6s ease-out forwards;
+        }
+
+        @keyframes bookOpen {
+            from { transform: scale(0.8) rotateY(-90deg); opacity: 0; }
+            to { transform: scale(1) rotateY(0deg); opacity: 1; }
+        }
+
+        /* 메시지 박스 스타일 */
+        .notification-toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ecc94b;
+            color: #1a1b26;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            font-weight: bold;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            z-index: 200;
+            display: none;
+        }
+
+        .loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #ecc94b;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 스크롤바 숨기기 */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+    <div class="magic-dust"></div>
+    <div id="toast" class="notification-toast"></div>
+
+    <!-- 로고 및 상단 헤더 -->
+    <header class="text-center mb-12 relative z-10">
+        <h1 class="text-4xl font-bold mb-2 tracking-widest text-yellow-400" style="text-shadow: 0 0 15px rgba(236, 201, 75, 0.5);">ARCANE ARCHIVE</h1>
+        <p class="text-purple-300 opacity-80">기록은 힘이 되고, 기억은 마법이 된다</p>
+    </header>
+
+    <!-- 중앙 질문 구역 -->
+    <main class="max-w-4xl mx-auto relative z-10">
+        <section class="floating-card rounded-3xl p-8 mb-16 text-center">
+            <div class="inline-block px-4 py-1 rounded-full border border-yellow-500/50 text-yellow-500 text-sm mb-4 font-bold tracking-widest">
+                CURRENT QUEST 🔮
+            </div>
+            <h2 id="current-question-display" class="text-2xl md:text-3xl font-bold mb-6 leading-relaxed">
+                "장송의 프리렌에서 당신이 가장 좋아하는 마법은 무엇인가요?"
+            </h2>
+            
+            <div class="flex flex-col md:flex-row gap-4 justify-center">
+                <button id="gen-question-btn" onclick="generateAiQuestion()" class="magic-btn px-6 py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2">
+                    <span id="btn-text">✨ 마력 충전 (AI 질문 생성)</span>
+                </button>
+                <button onclick="openWriteModal()" class="px-6 py-3 rounded-xl bg-purple-900/40 hover:bg-purple-800/60 text-purple-200 font-bold transition-all border border-purple-500/30 flex items-center justify-center gap-2">
+                    <span>📝 기록 봉인하기</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- 서재 아카이브 -->
+        <section>
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">🏛️</span>
+                    <h3 class="text-xl font-bold tracking-wider">나의 금서 보관소</h3>
+                    <span id="book-count" class="text-sm bg-purple-900/50 text-purple-300 px-3 py-1 rounded-full border border-purple-500/30">6권의 기록</span>
+                </div>
+                <button onclick="getAiRecommendation()" class="text-sm text-yellow-500 hover:text-yellow-400 font-bold border-b border-yellow-500/50 pb-1 flex items-center gap-1">
+                    <span>🔮 운명의 수정구슬 (추천 받기)</span>
+                </button>
+            </div>
+
+            <div class="relative group">
+                <!-- 책들 나열 -->
+                <div id="bookshelf" class="flex items-end justify-start gap-3 px-6 pb-2 overflow-x-auto min-h-[250px] scrollbar-hide">
+                    <!-- 기본 데이터 -->
+                    <div class="grimoire bg-red-900 border-l-4 border-red-700 text-red-100" 
+                         onclick="openGrimoire('장송의 프리렌', '가장 봉인해두고 싶은 기억은?', '힘멜과의 10년, 그 짧지만 영원한 시간의 조각들.')">프리렌</div>
+                    
+                    <div class="grimoire bg-blue-900 border-l-4 border-blue-700 text-blue-100 h-[195px]" 
+                         onclick="openGrimoire('귀멸의 칼날', '가장 눈물 흘렸던 죽음은?', '렌고쿠 쿄쥬로의 마지막 미소. 그의 의지가 내 마음도 뜨겁게 했어.')">귀멸의칼날</div>
+                    
+                    <div class="grimoire bg-emerald-900 border-l-4 border-emerald-700 text-emerald-100 h-[170px]" 
+                         onclick="openGrimoire('주술회전', '가장 가지고 싶은 영역 전개는?', '무량공처. 압도적인 정보량으로 적을 무력화하는 연출이 최고야.')">주술회전</div>
+                    
+                    <div class="grimoire bg-amber-900 border-l-4 border-amber-700 text-amber-100 h-[210px]" 
+                         onclick="openGrimoire('하이큐!!', '내 삶을 바꾼 한 문장은?', '무슨 일이 있어도 공은 반드시 올라온다. 끝까지 포기하지 않는 연결의 힘.')">하이큐!!</div>
+                    
+                    <div class="grimoire bg-indigo-900 border-l-4 border-indigo-700 text-indigo-100 h-[185px]" 
+                         onclick="openGrimoire('최애의 아이', '작품 속 가장 충격적인 마법은?', '거짓말은 가장 지독하고 아름다운 마법이다. 아이의 눈빛이 잊혀지지 않아.')">최애의아이</div>
+                    
+                    <div class="grimoire bg-slate-900 border-l-4 border-slate-700 text-slate-100 h-[175px]" 
+                         onclick="openGrimoire('스파이패밀리', '아냐가 당신의 마음을 읽는다면?', '내 덕후 같은 마음을 들키고 아냐가 당황해하는 모습이 상상돼서 웃음이 나.')">스파이패밀리</div>
+                </div>
+                <!-- 선반 바닥 -->
+                <div class="shelf-plate w-full"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 모달: 마도서 펼치기 -->
+    <div id="modalOverlay" class="modal-blur fixed inset-0 flex items-center justify-center p-4" onclick="closeGrimoire()">
+        <div id="grimoireContent" class="bg-[#f4eee0] text-[#2d241e] w-full max-w-lg p-10 rounded-r-3xl rounded-l-md shadow-2xl relative book-open-anim border-l-[12px] border-amber-900" onclick="event.stopPropagation()">
+            <div class="absolute top-4 right-6 text-2xl cursor-pointer opacity-50 hover:opacity-100" onclick="closeGrimoire()">×</div>
+            
+            <h3 id="m-title" class="text-2xl font-bold mb-4 font-serif text-amber-900"></h3>
+            
+            <div class="h-px bg-amber-900/20 mb-8"></div>
+            
+            <div class="mb-8">
+                <span class="text-xs uppercase tracking-widest text-amber-900/40 font-bold block mb-2">The Sealed Question</span>
+                <div class="text-lg font-bold border-l-2 border-amber-700/30 pl-4 py-1 italic">
+                    <span class="text-amber-800/60 mr-2">Q.</span>
+                    <span id="m-question"></span>
+                </div>
+            </div>
+
+            <div>
+                <span class="text-xs uppercase tracking-widest text-amber-900/40 font-bold block mb-2">My Arcane Record</span>
+                <div class="text-lg leading-relaxed font-serif pl-4">
+                    <span class="text-amber-800/60 font-bold mr-2">A.</span>
+                    <span id="m-body"></span>
+                </div>
+            </div>
+
+            <div class="mt-12 pt-6 border-t border-amber-900/10 flex justify-between items-center text-xs text-amber-900/40 font-bold">
+                <span>Arcane Memory #024</span>
+                <span id="m-date">2026.02.13</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 모달: 기록 작성 -->
+    <div id="writeModal" class="modal-blur fixed inset-0 flex items-center justify-center p-4" onclick="closeWriteModal()">
+        <div class="bg-gray-900 border border-purple-500/30 w-full max-w-md p-8 rounded-3xl shadow-2xl" onclick="event.stopPropagation()">
+            <h3 class="text-2xl font-bold text-yellow-400 mb-2">📖 새로운 기록 봉인</h3>
+            <p id="write-q-display" class="text-purple-300 text-sm mb-6"></p>
+            
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Title (Anime Name)</label>
+                <input id="input-title" type="text" placeholder="예: 장송의 프리렌" class="w-full bg-gray-800 border border-purple-500/20 rounded-xl px-4 py-2 focus:outline-none focus:border-purple-500 text-white">
+            </div>
+
+            <div class="mb-6 relative">
+                <label class="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Your Answer</label>
+                <textarea id="input-answer" rows="4" placeholder="당신의 생각을 자유롭게 적어주세요..." class="w-full bg-gray-800 border border-purple-500/20 rounded-xl px-4 py-2 focus:outline-none focus:border-purple-500 text-white"></textarea>
+                <button onclick="refineWithAi()" class="absolute bottom-3 right-3 text-xs bg-purple-600/40 hover:bg-purple-600 text-white px-3 py-1 rounded-full transition-all flex items-center gap-1">
+                    <span id="refine-text">✨ AI 마법 변환</span>
+                </button>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="saveRecord()" class="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition-all">
+                    기록 봉인 완료
+                </button>
+                <button onclick="closeWriteModal()" class="px-6 py-3 rounded-xl bg-gray-800 text-gray-400 font-bold">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const apiKey = "";
+        let currentQuestion = "장송의 프리렌에서 당신이 가장 봉인해두고 싶은 기억은 무엇인가요?";
+        let records = [];
+
+        // --- Gemini API 마법 함수 ---
+        async function callGemini(prompt, systemInstruction = "") {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined
+            };
+
+            for (let i = 0; i < 5; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+                    return result.candidates?.[0]?.content?.parts?.[0]?.text || "마법이 잠시 불발되었습니다.";
+                } catch (error) {
+                    const delay = Math.pow(2, i) * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+            return "마법의 흐름이 불안정합니다. 잠시 후 다시 시도해 주세요.";
+        }
+
+        // 1. ✨ AI 질문 생성
+        async function generateAiQuestion() {
+            const btn = document.getElementById('gen-question-btn');
+            const btnText = document.getElementById('btn-text');
+            btn.disabled = true;
+            btnText.innerHTML = `<div class="flex items-center gap-2"><div class="loading-spinner"></div> 마력 추출 중...</div>`;
+
+            const prompt = "다양한 유명 애니메이션(최신 유행 포함)을 주제로, 사용자가 자신의 철학이나 감상을 깊게 적을 수 있는 흥미로운 질문을 1개 만들어줘. 질문은 부드럽고 신비로운 마법사 컨셉의 문체로 작성하고, 한 문장으로 끝내줘.";
+            const systemPrompt = "너는 전설적인 마법 서재의 사서야. 애니메이션 덕후들을 위해 깊이 있는 질문을 던져야 해.";
+            
+            const newQ = await callGemini(prompt, systemPrompt);
+            currentQuestion = newQ.replace(/"/g, '');
+            document.getElementById('current-question-display').innerText = currentQuestion;
+            
+            btn.disabled = false;
+            btnText.innerText = "✨ 마력 충전 (AI 질문 생성)";
+            showToast("✨ 새로운 운명의 질문이 도착했습니다.");
+        }
+
+        // 2. ✨ AI 마법 문체 변환 (Refine)
+        async function refineWithAi() {
+            const answer = document.getElementById('input-answer').value;
+            const refineText = document.getElementById('refine-text');
+            if (!answer) return showToast("먼저 답변을 작성해 주세요.");
+
+            refineText.innerText = "✨ 변환 중...";
+            
+            const prompt = `사용자의 답변: "${answer}"\n\n위 답변의 내용은 유지하면서, 중세 판타지 마법 서적이나 고대 마도서에 적힌 사유처럼 신비롭고 우아한 문체로 다듬어줘. 3문장 이내로 짧고 강력하게 작성해줘.`;
+            const systemPrompt = "너는 평범한 글을 신비로운 마도서의 문장으로 바꾸는 고대 대마법사야.";
+
+            const refined = await callGemini(prompt, systemPrompt);
+            document.getElementById('input-answer').value = refined.trim();
+            refineText.innerText = "✨ AI 마법 변환";
+            showToast("✨ 문장에 마력이 깃들었습니다.");
+        }
+
+        // 3. ✨ 운명의 수정구슬 (추천)
+        async function getAiRecommendation() {
+            showToast("🔮 수정구슬이 당신의 기록을 읽고 있습니다...");
+            
+            const currentBooks = Array.from(document.querySelectorAll('.grimoire')).map(el => el.innerText).join(', ');
+            const prompt = `사용자의 현재 서재에 있는 애니메이션들: [${currentBooks}]\n\n이 취향을 분석해서, 사용자가 좋아할 만한 또 다른 애니메이션 1개를 추천해줘. 왜 추천하는지 그 이유를 마법사가 예언하듯 신비롭게 한 문장으로 말해줘.`;
+            
+            const recommendation = await callGemini(prompt, "너는 미래를 보는 점술사야.");
+            openGrimoire('운명의 예언', '당신의 영혼이 다음으로 마주할 세계는?', recommendation);
+        }
+
+        // --- UI 제어 함수 ---
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
+
+        function openGrimoire(title, question, answer) {
+            document.getElementById('m-title').innerText = "📖 " + title;
+            document.getElementById('m-question').innerText = question;
+            document.getElementById('m-body').innerText = answer;
+            document.getElementById('modalOverlay').style.display = 'flex';
+        }
+
+        function closeGrimoire() {
+            document.getElementById('modalOverlay').style.display = 'none';
+        }
+
+        function openWriteModal() {
+            document.getElementById('write-q-display').innerText = `Q. ${currentQuestion}`;
+            document.getElementById('writeModal').style.display = 'flex';
+        }
+
+        function closeWriteModal() {
+            document.getElementById('writeModal').style.display = 'none';
+            document.getElementById('input-title').value = '';
+            document.getElementById('input-answer').value = '';
+        }
+
+        function saveRecord() {
+            const title = document.getElementById('input-title').value;
+            const answer = document.getElementById('input-answer').value;
+
+            if (!title || !answer) return showToast("제목과 답변을 모두 채워주세요.");
+
+            // 새로운 책 엘리먼트 생성
+            const colors = ['bg-purple-900', 'bg-indigo-900', 'bg-rose-900', 'bg-cyan-900', 'bg-emerald-900'];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            const randomHeight = Math.floor(Math.random() * 40) + 160;
+
+            const newBook = document.createElement('div');
+            newBook.className = `grimoire ${randomColor} border-l-4 border-opacity-50 text-white`;
+            newBook.style.height = `${randomHeight}px`;
+            newBook.innerText = title;
+            newBook.onclick = () => openGrimoire(title, currentQuestion, answer);
+
+            document.getElementById('bookshelf').appendChild(newBook);
+            
+            // 카운트 업데이트
+            const count = document.querySelectorAll('.grimoire').length;
+            document.getElementById('book-count').innerText = `${count}권의 기록`;
+
+            showToast("✨ 새로운 마도서가 서재에 봉인되었습니다.");
+            closeWriteModal();
+        }
+    </script>
+</body>
+</html>
