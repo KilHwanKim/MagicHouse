@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로컬 스토리지 저장 테스트 — Arcane Archive</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-stone-900 text-stone-100 min-h-screen p-6">
+  <div class="max-w-2xl mx-auto">
+    <h1 class="text-2xl font-bold mb-2">로컬 스토리지 저장 테스트</h1>
+    <p class="text-stone-400 text-sm mb-6">메인 앱과 동일한 키(<code class="bg-stone-800 px-1 rounded">arcane_archive_local</code>)로 기록을 저장·조회합니다. 저장 후 메인 페이지를 새로고침하면 복원됩니다.</p>
+
+    <div class="space-y-4 mb-6 p-4 rounded-lg bg-stone-800/50 border border-stone-700">
+      <h2 class="text-lg font-semibold text-amber-600/90">기록 추가</h2>
+      <div>
+        <label class="block text-stone-400 text-sm mb-1">책 제목 (Codex Title)</label>
+        <input type="text" id="title" placeholder="예: 장송의 프리렌"
+          class="w-full rounded-lg bg-stone-800 border border-stone-600 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+      </div>
+      <div>
+        <label class="block text-stone-400 text-sm mb-1">질문 (Question)</label>
+        <input type="text" id="question" placeholder="예: 가장 봉인해두고 싶은 기억은?"
+          class="w-full rounded-lg bg-stone-800 border border-stone-600 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+      </div>
+      <div>
+        <label class="block text-stone-400 text-sm mb-1">답변 (Answer)</label>
+        <textarea id="answer" rows="3" placeholder="예: 힘멜과의 10년..."
+          class="w-full rounded-lg bg-stone-800 border border-stone-600 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"></textarea>
+      </div>
+      <button id="btnSave" class="w-full py-3 rounded-lg bg-amber-600 hover:bg-amber-500 font-medium transition-colors">
+        로컬에 저장
+      </button>
+    </div>
+
+    <div class="mb-4 flex gap-3">
+      <button id="btnRefresh" class="py-2 px-4 rounded-lg bg-stone-700 hover:bg-stone-600 font-medium transition-colors text-sm">
+        목록 새로고침
+      </button>
+      <button id="btnClear" class="py-2 px-4 rounded-lg bg-red-900/50 hover:bg-red-900 font-medium transition-colors text-sm text-red-200">
+        전체 삭제
+      </button>
+    </div>
+
+    <div id="status" class="mb-4 text-stone-400 text-sm min-h-[1.5rem]"></div>
+
+    <h2 class="text-lg font-semibold text-stone-300 mb-2">저장된 기록 (<span id="recordCount">0</span>건)</h2>
+    <div id="recordList" class="space-y-2 mb-8"></div>
+
+    <h2 class="text-lg font-semibold text-stone-300 mb-2">Raw JSON</h2>
+    <pre id="rawJson" class="p-4 rounded-lg bg-stone-950 border border-stone-700 text-xs text-stone-400 overflow-x-auto min-h-[80px]"></pre>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "arcane_archive_local";
+    const MAX_RECORDS = 50;
+
+    function uuid() {
+      return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/x/g, () => (Math.random() * 16 | 0).toString(16));
+    }
+
+    function getLocalData() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const data = JSON.parse(raw);
+          if (data && Array.isArray(data.records)) {
+            data.anonymousId = data.anonymousId || uuid();
+            return data;
+          }
+        }
+      } catch (e) {}
+      return { anonymousId: uuid(), records: [] };
+    }
+
+    function saveLocalData(data) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function setStatus(msg, isError = false) {
+      const el = document.getElementById("status");
+      el.textContent = msg;
+      el.className = "mb-4 text-sm min-h-[1.5rem] " + (isError ? "text-red-400" : "text-stone-400");
+    }
+
+    function render() {
+      const data = getLocalData();
+      document.getElementById("recordCount").textContent = data.records.length;
+      document.getElementById("rawJson").textContent = JSON.stringify(data, null, 2);
+
+      const listEl = document.getElementById("recordList");
+      listEl.innerHTML = "";
+      data.records.forEach((r, i) => {
+        const div = document.createElement("div");
+        div.className = "p-3 rounded-lg bg-stone-800/80 border border-stone-700 text-sm";
+        div.innerHTML = `
+          <div class="font-medium text-amber-600/90">${escapeHtml(r.title || "(제목 없음)")}</div>
+          <div class="text-stone-400 text-xs mt-1">Q. ${escapeHtml((r.question || "").slice(0, 60))}${(r.question || "").length > 60 ? "…" : ""}</div>
+          <div class="text-stone-500 text-xs mt-1">${escapeHtml((r.answer || "").slice(0, 80))}${(r.answer || "").length > 80 ? "…" : ""}</div>
+          <div class="text-stone-600 text-xs mt-2">${r.createdAt || ""}</div>
+          <div class="text-stone-600 text-xs mt-1">작품: ${(r.bookId || "").slice(0, 8)}… · 질문: ${(r.questionId || "").slice(0, 8)}… · 답변: ${(r.answerId || "").slice(0, 8)}…</div>
+        `;
+        listEl.appendChild(div);
+      });
+    }
+
+    function escapeHtml(s) {
+      const div = document.createElement("div");
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    document.getElementById("btnSave").addEventListener("click", () => {
+      const title = document.getElementById("title").value.trim();
+      const question = document.getElementById("question").value.trim();
+      const answer = document.getElementById("answer").value.trim();
+      if (!title || !question || !answer) {
+        setStatus("제목, 질문, 답변을 모두 입력하세요.", true);
+        return;
+      }
+      const data = getLocalData();
+      const record = {
+        id: uuid(),
+        bookId: uuid(),   // 작품 id (DB books 테이블 연동용)
+        questionId: uuid(), // 질문 id (DB questions 테이블 연동용)
+        answerId: uuid(),   // 답변 id (DB answers 테이블 연동용)
+        title,
+        question,
+        answer,
+        createdAt: new Date().toISOString(),
+        height: Math.floor(Math.random() * 70) + 190
+      };
+      data.records.push(record);
+      if (data.records.length > MAX_RECORDS) {
+        data.records = data.records.slice(-MAX_RECORDS);
+      }
+      if (!saveLocalData(data)) {
+        setStatus("저장 실패 (용량 한도 등)", true);
+        return;
+      }
+      setStatus("저장됨. 기록 " + data.records.length + "건.");
+      document.getElementById("title").value = "";
+      document.getElementById("question").value = "";
+      document.getElementById("answer").value = "";
+      render();
+    });
+
+    document.getElementById("btnRefresh").addEventListener("click", () => {
+      render();
+      setStatus("목록을 새로고침했습니다.");
+    });
+
+    document.getElementById("btnClear").addEventListener("click", () => {
+      if (!confirm("로컬 스토리지의 모든 기록을 삭제할까요?")) return;
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+        setStatus("전체 삭제됨.");
+        render();
+      } catch (e) {
+        setStatus("삭제 실패: " + e.message, true);
+      }
+    });
+
+    render();
+    setStatus("위에서 기록을 추가하거나, 목록 새로고침/전체 삭제를 사용하세요.");
+  </script>
+</body>
+</html>

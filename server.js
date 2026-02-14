@@ -108,4 +108,5 @@ app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
   console.log(`TMDB test: http://localhost:${PORT}/tests/tmdb.html`);
   console.log(`질문 생성 테스트: http://localhost:${PORT}/tests/generate-questions.html`);
+  console.log(`로컬 스토리지 테스트: http://localhost:${PORT}/tests/local-storage.html`);
 });
