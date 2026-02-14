@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenAI 질문 5개 생성 테스트</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-stone-900 text-stone-100 min-h-screen p-6">
+  <div class="max-w-2xl mx-auto">
+    <h1 class="text-2xl font-bold mb-2">TMDB overview → 질문 5개 생성</h1>
+    <p class="text-stone-400 text-sm mb-6">작품 제목(선택)과 줄거리(overview)를 넣으면 OpenAI가 질문 5개를 생성합니다.</p>
+
+    <div class="space-y-4 mb-6">
+      <div>
+        <label class="block text-stone-400 text-sm mb-1">작품 제목 (선택)</label>
+        <input type="text" id="title" placeholder="예: 장송의 프리렌"
+          class="w-full rounded-lg bg-stone-800 border border-stone-600 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+      </div>
+      <div>
+        <label class="block text-stone-400 text-sm mb-1">줄거리 (overview) *</label>
+        <textarea id="overview" rows="6" placeholder="TMDB 검색 결과의 overview를 붙여넣으세요."
+          class="w-full rounded-lg bg-stone-800 border border-stone-600 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"></textarea>
+      </div>
+      <button id="btn" class="w-full py-3 rounded-lg bg-amber-600 hover:bg-amber-500 font-medium transition-colors">
+        질문 5개 생성
+      </button>
+    </div>
+
+    <div id="status" class="mb-4 text-stone-400 text-sm min-h-[1.5rem]"></div>
+    <ul id="questions" class="space-y-2 list-decimal list-inside"></ul>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+    const btn = document.getElementById("btn");
+    const titleInput = document.getElementById("title");
+    const overviewInput = document.getElementById("overview");
+    const status = document.getElementById("status");
+    const questionsEl = document.getElementById("questions");
+
+    btn.addEventListener("click", async () => {
+      const overview = overviewInput.value.trim();
+      if (!overview) {
+        status.textContent = "줄거리를 입력하세요.";
+        status.className = "mb-4 text-sm min-h-[1.5rem] text-red-400";
+        return;
+      }
+
+      btn.disabled = true;
+      status.textContent = "질문을 연성하고 있습니다…";
+      status.className = "mb-4 text-sm min-h-[1.5rem] text-stone-400";
+      questionsEl.innerHTML = "";
+
+      try {
+        const res = await fetch(`${API_BASE}/api/generate-questions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: titleInput.value.trim() || undefined,
+            overview,
+          }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          status.textContent = "오류: " + (data.error || res.status);
+          status.className = "mb-4 text-sm min-h-[1.5rem] text-red-400";
+          return;
+        }
+
+        const list = data.questions || [];
+        status.textContent = list.length ? "질문 " + list.length + "개 생성됨." : "질문이 생성되지 않았습니다.";
+        list.forEach((q) => {
+          const li = document.createElement("li");
+          li.className = "text-stone-200";
+          li.textContent = q;
+          questionsEl.appendChild(li);
+        });
+      } catch (err) {
+        status.textContent = "요청 실패: " + err.message;
+        status.className = "mb-4 text-sm min-h-[1.5rem] text-red-400";
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
