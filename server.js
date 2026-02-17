@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
+import { readFileSync } from "fs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -51,16 +52,41 @@ app.post("/api/generate-questions", async (req, res) => {
     return res.status(400).json({ error: "body.overview is required" });
   }
 
-  const systemContent = `당신은 영화/애니 작품을 보고 시청자에게 던질 질문을 만드는 사람입니다.
-주어진 작품 줄거리(overview)만 보고, 그 작품을 본 사람이 생각해 보면 좋을 질문을 정확히 5개 만들어 주세요.
-- 질문은 반드시 한국어로만 작성하세요.
-- 각 질문은 한 문장으로, 감상/추억/공감을 이끌어 내는 질문이어야 합니다.
-- 응답은 반드시 JSON 배열 하나만 출력하세요. 다른 설명 없이 배열만 출력합니다.
-- 형식: ["질문1", "질문2", "질문3", "질문4", "질문5"]`;
+  // 시스템 프롬프트 파일 읽기
+  let systemContent;
+  try {
+    const promptPath = path.join(__dirname, "prompts", "system-prompt.txt");
+    systemContent = readFileSync(promptPath, "utf-8").trim();
+  } catch (error) {
+    console.error("프롬프트 파일 읽기 실패:", error);
+    return res.status(500).json({ error: "프롬프트 파일을 읽을 수 없습니다." });
+  }
 
   const userContent = title
     ? `작품 제목: ${title}\n\n줄거리:\n${overviewText}`
     : `줄거리:\n${overviewText}`;
+
+  // ========== 테스트용 로그 (운영 시 삭제 필요) ==========
+  console.log("=== OpenAI API 호출 시작 ===");
+  console.log("Request URL: https://api.openai.com/v1/chat/completions");
+  console.log("Model: gpt-4o");
+  console.log("\n[System Message]:");
+  console.log(systemContent);
+  console.log("\n[User Message]:");
+  console.log(userContent);
+  console.log("\n[Request Payload]:");
+  const requestPayload = {
+    model: "gpt-4o",
+    messages: [
+      { role: "system", content: systemContent },
+      { role: "user", content: userContent },
+    ],
+    temperature: 0.7,
+    max_tokens: 1024,
+  };
+  console.log(JSON.stringify(requestPayload, null, 2));
+  console.log("=====================================");
+  // ========================================================
 
   try {
     const r = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -69,18 +95,30 @@ app.post("/api/generate-questions", async (req, res) => {
         "Content-Type": "application/json",
         Authorization: `Bearer ${openaiKey}`,
       },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemContent },
-          { role: "user", content: userContent },
-        ],
-        temperature: 0.7,
-        max_tokens: 1024,
-      }),
+      body: JSON.stringify(requestPayload),
     });
 
     const data = await r.json();
+    
+    // ========== 테스트용 로그 (운영 시 삭제 필요) ==========
+    console.log("=== OpenAI API 응답 ===");
+    console.log("Status:", r.status, r.statusText);
+    console.log("Response Headers:", Object.fromEntries(r.headers.entries()));
+    console.log("\n[Response Data]:");
+    console.log(JSON.stringify(data, null, 2));
+    if (data.choices?.[0]?.message?.content) {
+      console.log("\n[Assistant Message]:");
+      console.log(data.choices[0].message.content);
+    }
+    if (data.usage) {
+      console.log("\n[Token Usage]:");
+      console.log(`  Prompt tokens: ${data.usage.prompt_tokens}`);
+      console.log(`  Completion tokens: ${data.usage.completion_tokens}`);
+      console.log(`  Total tokens: ${data.usage.total_tokens}`);
+    }
+    console.log("=====================================");
+    // ========================================================
+
     if (!r.ok) {
       return res.status(r.status).json({
         error: data.error?.message || "OpenAI API error",
@@ -88,15 +126,24 @@ app.post("/api/generate-questions", async (req, res) => {
       });
     }
 
-    const raw = data.choices?.[0]?.message?.content?.trim() || "";
+    let raw = data.choices?.[0]?.message?.content?.trim() || "";
+    
+    // 마크다운 코드 블록 제거 (```json ... ``` 형식)
+    raw = raw.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
+    
     let questions = [];
     try {
       const parsed = JSON.parse(raw);
       questions = Array.isArray(parsed)
         ? parsed.filter((q) => typeof q === "string").slice(0, 5)
         : [];
-    } catch {
-      questions = raw.split("\n").filter((s) => s.trim()).slice(0, 5);
+    } catch (parseError) {
+      // JSON 파싱 실패 시 줄바꿈으로 분리 시도
+      console.warn("JSON 파싱 실패, 줄바꿈으로 분리 시도:", parseError.message);
+      questions = raw.split("\n")
+        .map((s) => s.trim())
+        .filter((s) => s && !s.startsWith("```") && s.length > 0)
+        .slice(0, 5);
     }
     res.json({ questions });
   } catch (err) {

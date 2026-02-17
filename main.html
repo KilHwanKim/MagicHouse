@@ -307,6 +307,12 @@
             outline: none;
         }
 
+        .mana-input:disabled {
+            background: rgba(0, 0, 0, 0.02);
+            color: rgba(45, 36, 30, 0.4);
+            cursor: not-allowed;
+        }
+
         /* 작품 추가 모달 */
         .modal-blur {
             display: none;
@@ -419,7 +425,16 @@
                 <h3 id="book-title" class="text-2xl md:text-3xl font-bold mb-6 font-serif text-[#36241a] border-b border-[#36241a]/10 pb-4">작품명</h3>
                 <div class="flex-1 flex flex-col justify-center">
                     <div class="text-[10px] uppercase tracking-[0.2em] text-[#36241a]/40 font-bold mb-4 italic">The Sealed Question</div>
-                    <div id="q-text" class="text-lg font-bold border-l-4 border-[#c5a059]/50 pl-6 py-2 italic text-[#4a342e]">질문이 표시됩니다.</div>
+                    <div class="relative group">
+                        <div id="q-text" class="text-lg font-bold border-l-4 border-[#c5a059]/50 pl-6 py-2 italic text-[#4a342e] pr-12">질문이 표시됩니다.</div>
+                        <button 
+                            onclick="deleteCurrentQuestion()" 
+                            class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-[#36241a]/40 hover:text-red-600 text-xl font-bold p-1 rounded hover:bg-red-50"
+                            title="질문 삭제"
+                        >
+                            ×
+                        </button>
+                    </div>
                 </div>
                 <div class="mt-8 flex items-center justify-between">
                     <div class="flex gap-2">
@@ -492,7 +507,8 @@
         const IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
         
         // 초기 데이터 (빈 상태로 시작)
-        let archiveData = {};
+        let archiveData = {}; // { title: { questions: [...], overview: "" } }
+        let workMetadata = {}; // { title: { overview: "" } } - 작품 메타데이터
         
         let currentOpenAnime = "";
         let currentQIndex = 0;
@@ -525,6 +541,28 @@
                 addBookToNextAvailableShelf(title);
             });
             updateVolumeCount();
+        }
+
+        // archiveData 구조 호환성 함수: 기존 배열 형태를 새로운 구조로 변환
+        function getQuestionsForTitle(title) {
+            if (!archiveData[title]) return [];
+            // 기존 배열 형태인지 확인
+            if (Array.isArray(archiveData[title])) {
+                return archiveData[title];
+            }
+            // 새로운 구조인 경우
+            return archiveData[title].questions || [];
+        }
+
+        function getOverviewForTitle(title) {
+            return workMetadata[title]?.overview || "";
+        }
+
+        // 기본 질문인지 확인하는 함수
+        function isDefaultQuestion(questionText, title) {
+            if (!questionText || !title) return false;
+            const defaultPattern = `'${title}'에 대한 첫 번째 기록을 시작하십시오.`;
+            return questionText.trim() === defaultPattern;
         }
 
         // 선반의 사용 가능한 너비 계산
@@ -664,8 +702,11 @@
 
         function openGrimoire(title) {
             currentOpenAnime = title;
-            if (!archiveData[title]) archiveData[title] = [{ q: `'${title}'에 대한 첫 번째 기록을 시작하십시오.`, a: "" }];
-            currentQIndex = archiveData[title].length - 1;
+            if (!archiveData[title]) {
+                archiveData[title] = [{ q: `'${title}'에 대한 첫 번째 기록을 시작하십시오.`, a: "" }];
+            }
+            const questions = getQuestionsForTitle(title);
+            currentQIndex = questions.length - 1;
             document.getElementById('book-title').innerText = title;
             updatePageContent();
             document.getElementById('book-modal').style.display = 'flex';
@@ -677,16 +718,67 @@
         }
 
         function updatePageContent() {
-            const history = archiveData[currentOpenAnime];
-            const item = history[currentQIndex];
+            const questions = getQuestionsForTitle(currentOpenAnime);
+            const hasQuestions = questions && questions.length > 0;
+            
+            const textarea = document.getElementById('a-input');
+            const saveBtn = document.querySelector('button[onclick="saveCurrentAnswer()"]');
+            
+            if (!hasQuestions) {
+                // 질문이 없을 때 비활성화
+                document.getElementById('q-text').innerText = "질문이 없습니다. 새 사유를 연성하십시오.";
+                document.getElementById('a-input').value = "";
+                document.getElementById('q-index').innerText = "0 / 0";
+                textarea.disabled = true;
+                if (saveBtn) saveBtn.disabled = true;
+                return;
+            }
+            
+            // 질문이 있을 때
+            const item = questions[currentQIndex];
+            const isDefault = isDefaultQuestion(item.q, currentOpenAnime);
+            
             document.getElementById('q-text').innerText = item.q;
             document.getElementById('a-input').value = item.a;
-            document.getElementById('q-index').innerText = `${currentQIndex + 1} / ${history.length}`;
+            document.getElementById('q-index').innerText = `${currentQIndex + 1} / ${questions.length}`;
+            
+            // 기본 질문일 때는 수정과 저장 비활성화
+            if (isDefault) {
+                textarea.disabled = true;
+                if (saveBtn) saveBtn.disabled = true;
+            } else {
+                textarea.disabled = false;
+                if (saveBtn) saveBtn.disabled = false;
+            }
         }
 
-        function prevQuestion() { if (currentQIndex > 0) { saveCurrentAnswer(); currentQIndex--; updatePageContent(); } }
-        function nextQuestion() { if (currentQIndex < archiveData[currentOpenAnime].length - 1) { saveCurrentAnswer(); currentQIndex++; updatePageContent(); } }
-        function saveCurrentAnswer() { if (currentOpenAnime && archiveData[currentOpenAnime][currentQIndex]) archiveData[currentOpenAnime][currentQIndex].a = document.getElementById('a-input').value; }
+        function prevQuestion() { 
+            const questions = getQuestionsForTitle(currentOpenAnime);
+            if (currentQIndex > 0) { 
+                saveCurrentAnswer(); 
+                currentQIndex--; 
+                updatePageContent(); 
+            } 
+        }
+        function nextQuestion() { 
+            const questions = getQuestionsForTitle(currentOpenAnime);
+            if (currentQIndex < questions.length - 1) { 
+                saveCurrentAnswer(); 
+                currentQIndex++; 
+                updatePageContent(); 
+            } 
+        }
+        function saveCurrentAnswer() { 
+            if (!currentOpenAnime) return;
+            const questions = getQuestionsForTitle(currentOpenAnime);
+            if (questions[currentQIndex]) {
+                // 기본 질문일 때는 저장하지 않음
+                const isDefault = isDefaultQuestion(questions[currentQIndex].q, currentOpenAnime);
+                if (isDefault) return;
+                
+                questions[currentQIndex].a = document.getElementById('a-input').value;
+            }
+        }
 
         async function conjureNewQuestion() {
             const btn = event.currentTarget;
@@ -694,11 +786,107 @@
             const originalText = btn.innerText;
             btn.innerText = "연성 중...";
             saveCurrentAnswer();
-            const prompt = `애니메이션이나 영화 '${currentOpenAnime}'의 주제 의식에 대해 철학적이고 오만한 제리에의 말투로 질문을 한 문장으로 만들어라.`;
-            const newQ = await fetchGemini(prompt, "당신은 제리에입니다.");
-            archiveData[currentOpenAnime].push({ q: newQ.trim(), a: "" });
-            currentQIndex = archiveData[currentOpenAnime].length - 1;
-            btn.disabled = false; btn.innerText = originalText;
+            
+            try {
+                // overview 가져오기 (없으면 작품 제목 기반 기본 설명 사용)
+                let overview = getOverviewForTitle(currentOpenAnime);
+                if (!overview || overview.trim() === "") {
+                    overview = `${currentOpenAnime}에 대한 작품입니다.`;
+                }
+
+                const requestBody = {
+                    title: currentOpenAnime,
+                    overview: overview
+                };
+
+                // ========== 테스트용 로그 (운영 시 삭제 필요) ==========
+                console.log("=== Open API 호출 요청 ===");
+                console.log("URL:", `${API_BASE}/api/generate-questions`);
+                console.log("Request Body:", JSON.stringify(requestBody, null, 2));
+                console.log("=====================================");
+                // ========================================================
+
+                const res = await fetch(`${API_BASE}/api/generate-questions`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(requestBody),
+                });
+                const data = await res.json();
+
+                // ========== 테스트용 로그 (운영 시 삭제 필요) ==========
+                console.log("=== Open API 호출 응답 ===");
+                console.log("Status:", res.status, res.statusText);
+                console.log("Response Data:", JSON.stringify(data, null, 2));
+                if (data.questions) {
+                    console.log("생성된 질문 개수:", data.questions.length);
+                    data.questions.forEach((q, idx) => {
+                        console.log(`질문 ${idx + 1}:`, q);
+                    });
+                }
+                console.log("=====================================");
+                // ========================================================
+
+                if (!res.ok) {
+                    throw new Error(data.error || "질문 생성 실패");
+                }
+
+                const newQuestions = data.questions || [];
+                if (newQuestions.length === 0) {
+                    throw new Error("생성된 질문이 없습니다.");
+                }
+
+                // 질문 5개를 archiveData에 추가
+                const questions = getQuestionsForTitle(currentOpenAnime);
+                
+                // 기본 질문이 있으면 삭제
+                const defaultIndex = questions.findIndex((item) => isDefaultQuestion(item.q, currentOpenAnime));
+                if (defaultIndex !== -1) {
+                    questions.splice(defaultIndex, 1);
+                }
+                
+                // 새 질문 추가
+                const startIndex = questions.length;
+                newQuestions.forEach((q) => {
+                    questions.push({ q: q.trim(), a: "" });
+                });
+                
+                // 생성된 질문 중 첫 번째로 이동
+                currentQIndex = startIndex;
+                updatePageContent();
+            } catch (error) {
+                console.error("질문 생성 오류:", error);
+                alert("질문 생성 중 오류가 발생했습니다: " + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = originalText;
+            }
+        }
+
+        function deleteCurrentQuestion() {
+            if (!currentOpenAnime) return;
+            
+            const questions = getQuestionsForTitle(currentOpenAnime);
+            if (questions.length === 0) return;
+            
+            // 현재 답변 저장
+            saveCurrentAnswer();
+            
+            // 현재 질문 삭제
+            questions.splice(currentQIndex, 1);
+            
+            // 질문이 모두 삭제된 경우
+            if (questions.length === 0) {
+                currentQIndex = 0;
+                updatePageContent();
+                return;
+            }
+            
+            // 삭제 후 적절한 인덱스로 이동
+            // 현재 인덱스가 마지막이었으면 이전 질문으로, 아니면 현재 인덱스 유지 (다음 질문이 앞으로 이동)
+            if (currentQIndex >= questions.length) {
+                currentQIndex = questions.length - 1;
+            }
+            
             updatePageContent();
         }
 
@@ -815,6 +1003,11 @@
 
             // archiveData에 추가
             archiveData[title] = [{ q: `'${title}'에 대한 첫 번째 기록을 시작하십시오.`, a: "" }];
+            
+            // 작품 메타데이터에 overview 저장
+            if (item.overview) {
+                workMetadata[title] = { overview: item.overview };
+            }
 
             // 플러스 버튼이 있는 선반에 책 추가 (왼쪽 위부터 순서대로)
             addBookToNextAvailableShelf(title);
