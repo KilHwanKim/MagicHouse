@@ -11,9 +11,8 @@ const TMDB_BASE = "https://api.themoviedb.org/3";
 
 app.use(express.json());
 
-// 정적 파일: 프로젝트 루트 + tests 폴더
-app.use(express.static(__dirname));
-app.use("/tests", express.static(path.join(__dirname, "tests")));
+// 정적 파일: public 폴더 (Vercel outputDirectory와 동일)
+app.use(express.static(path.join(__dirname, "public")));
 
 // TMDB 검색 프록시 (API 키 노출 방지)
 app.get("/api/tmdb/search", async (req, res) => {
