@@ -495,12 +495,15 @@
                     </div>
                 </div>
                 <div class="mt-8 flex items-center justify-between">
-                    <div class="flex gap-2">
-                        <button onclick="prevQuestion()" class="p-2 border border-[#36241a]/20 hover:bg-[#36241a]/5 rounded">◀</button>
-                        <span id="q-index" class="text-[10px] font-bold text-[#36241a]/50 flex items-center px-1">1 / 1</span>
-                        <button onclick="nextQuestion()" class="p-2 border border-[#36241a]/20 hover:bg-[#36241a]/5 rounded">▶</button>
+                    <div class="flex gap-2 flex-wrap items-center">
+                        <div class="flex gap-2">
+                            <button onclick="prevQuestion()" class="p-2 border border-[#36241a]/20 hover:bg-[#36241a]/5 rounded">◀</button>
+                            <span id="q-index" class="text-[10px] font-bold text-[#36241a]/50 flex items-center px-1">1 / 1</span>
+                            <button onclick="nextQuestion()" class="p-2 border border-[#36241a]/20 hover:bg-[#36241a]/5 rounded">▶</button>
+                        </div>
+                        <button onclick="addCustomQuestion()" class="gold-btn text-[10px] px-3 py-2">✍️ 질문 직접 연성</button>
+                        <button onclick="conjureNewQuestion()" class="gold-btn text-[10px] px-3 py-2">✨ 새 질문 연성</button>
                     </div>
-                    <button onclick="conjureNewQuestion()" class="gold-btn text-[10px] px-3 py-2">✨ 새 사유 연성</button>
                 </div>
             </div>
             <div class="book-page page-right flex flex-col">
@@ -510,7 +513,7 @@
                     <textarea id="a-input" class="mana-input flex-1" placeholder="당신의 통찰을 이곳에 봉인하십시오..."></textarea>
                 </div>
                 <div class="mt-6 flex justify-end gap-3 items-center">
-                    <button id="save-answer-btn" onclick="saveCurrentAnswer(); saveToLocalStorage();" class="gold-btn text-[10px] px-6 py-2">봉인 완료</button>
+                    <button id="save-answer-btn" onclick="saveAndCloseGrimoire()" class="gold-btn text-[10px] px-6 py-2">봉인 완료</button>
                 </div>
                 <div class="mt-4 flex justify-end gap-2 flex-wrap">
                     <button type="button" id="share-qa-btn" onclick="queueShareQuestionAnswerFeed()" class="gold-btn text-[10px] px-4 py-2" title="질문과 답변을 이미지로 카카오톡 공유">📜 이미지로 공유</button>
@@ -803,6 +806,12 @@
             document.getElementById('book-modal').style.display = 'flex';
         }
 
+        function saveAndCloseGrimoire() {
+            saveCurrentAnswer();
+            saveToLocalStorage();
+            document.getElementById('book-modal').style.display = 'none';
+        }
+
         function closeGrimoire() {
             if (confirm("저장하시겠습니까?")) {
                 saveCurrentAnswer();
@@ -872,6 +881,24 @@
                 
                 questions[currentQIndex].a = document.getElementById('a-input').value;
             }
+        }
+
+        function addCustomQuestion() {
+            saveCurrentAnswer();
+            if (!currentOpenAnime) return;
+            const q = (prompt("추가할 질문을 입력하세요.") || "").trim();
+            if (!q) return;
+            const questions = getQuestionsForTitle(currentOpenAnime);
+            const defaultIndex = questions.findIndex((item) => isDefaultQuestion(item.q, currentOpenAnime));
+            if (defaultIndex !== -1) {
+                questions.splice(defaultIndex, 1);
+            }
+            const newIndex = questions.length;
+            questions.push({ q: q, a: "" });
+            currentQIndex = newIndex;
+            updatePageContent();
+            updateBookWidthForTitle(currentOpenAnime);
+            saveToLocalStorage();
         }
 
         async function conjureNewQuestion() {
