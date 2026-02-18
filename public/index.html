@@ -289,6 +289,8 @@
             #book-title { font-size: 1.25rem; margin-bottom: 1rem; }
             #q-text { font-size: 0.95rem; padding-left: 1rem; }
             .mana-input { padding: 8px; font-size: 14px; min-height: 80px; }
+            .a-radio-option { padding: 12px 14px; }
+            .a-radio-option span { font-size: 14px; }
             .ancient-slab { padding: 24px 20px; max-height: 85vh; }
             .search-result-item { flex-direction: column; gap: 12px; padding: 12px; }
             .search-result-poster, .search-result-poster-placeholder { width: 100%; height: auto; aspect-ratio: 2/3; max-width: 120px; margin: 0 auto; }
@@ -342,6 +344,54 @@
         .mana-input:disabled {
             background: rgba(0, 0, 0, 0.02);
             color: rgba(45, 36, 30, 0.4);
+            cursor: not-allowed;
+        }
+
+        .a-radio-wrap {
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .a-radio-wrap.visible { display: flex; }
+        .a-radio-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(54, 36, 26, 0.15);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            border-left: 3px solid transparent;
+        }
+        .a-radio-option:hover {
+            background: rgba(197, 160, 89, 0.06);
+            border-color: rgba(197, 160, 89, 0.3);
+        }
+        .a-radio-option.checked {
+            background: rgba(197, 160, 89, 0.08);
+            border-left-color: var(--ancient-gold);
+            box-shadow: 0 0 0 1px rgba(197, 160, 89, 0.2);
+        }
+        .a-radio-option input {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--ancient-gold);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .a-radio-option span {
+            color: #2d241e;
+            font-size: 15px;
+            line-height: 1.5;
+            flex: 1;
+        }
+        .a-radio-option.disabled {
+            opacity: 0.6;
             cursor: not-allowed;
         }
 
@@ -510,7 +560,10 @@
                 <div class="absolute top-4 right-6 text-3xl cursor-pointer opacity-30 hover:opacity-100" onclick="closeGrimoire()">×</div>
                 <div class="flex-1 flex flex-col mt-8">
                     <div class="text-[10px] uppercase tracking-[0.2em] text-[#36241a]/40 font-bold mb-4 italic">My Arcane Record</div>
-                    <textarea id="a-input" class="mana-input flex-1" placeholder="당신의 통찰을 이곳에 봉인하십시오..."></textarea>
+                    <div id="a-container" class="flex-1 flex flex-col min-h-0">
+                        <textarea id="a-input" class="mana-input flex-1" placeholder="당신의 통찰을 이곳에 봉인하십시오..."></textarea>
+                        <div id="a-radio-wrap" class="a-radio-wrap"></div>
+                    </div>
                 </div>
                 <div class="mt-6 flex justify-end gap-3 items-center">
                     <button id="save-answer-btn" onclick="saveAndCloseGrimoire()" class="gold-btn text-[10px] px-6 py-2">봉인 완료</button>
@@ -809,7 +862,15 @@
         function saveAndCloseGrimoire() {
             saveCurrentAnswer();
             saveToLocalStorage();
-            document.getElementById('book-modal').style.display = 'none';
+            const questions = getQuestionsForTitle(currentOpenAnime);
+            const hasNext = currentQIndex < questions.length - 1;
+            if (hasNext) {
+                currentQIndex++;
+                updatePageContent();
+            } else {
+                alert("마지막 질문입니다.");
+                document.getElementById('book-modal').style.display = 'none';
+            }
         }
 
         function closeGrimoire() {
@@ -825,14 +886,17 @@
             const hasQuestions = questions && questions.length > 0;
             
             const textarea = document.getElementById('a-input');
+            const radioWrap = document.getElementById('a-radio-wrap');
             const saveBtn = document.getElementById('save-answer-btn');
             
             if (!hasQuestions) {
                 // 질문이 없을 때 비활성화
                 document.getElementById('q-text').innerText = "질문이 없습니다. 새 사유를 연성하십시오.";
-                document.getElementById('a-input').value = "";
+                textarea.value = "";
                 document.getElementById('q-index').innerText = "0 / 0";
+                textarea.style.display = "";
                 textarea.disabled = true;
+                if (radioWrap) { radioWrap.classList.remove("visible"); radioWrap.innerHTML = ""; }
                 if (saveBtn) saveBtn.disabled = true;
                 return;
             }
@@ -840,19 +904,46 @@
             // 질문이 있을 때
             const item = questions[currentQIndex];
             const isDefault = isDefaultQuestion(item.q, currentOpenAnime);
+            const hasOptions = item.options && Array.isArray(item.options) && item.options.length > 0;
             
             document.getElementById('q-text').innerText = item.q;
-            document.getElementById('a-input').value = item.a;
             document.getElementById('q-index').innerText = `${currentQIndex + 1} / ${questions.length}`;
             
-            // 기본 질문일 때는 수정과 저장 비활성화
-            if (isDefault) {
+            if (hasOptions) {
+                textarea.style.display = "none";
                 textarea.disabled = true;
-                if (saveBtn) saveBtn.disabled = true;
+                radioWrap.classList.add("visible");
+                radioWrap.innerHTML = "";
+                const savedVal = item.a || "";
+                item.options.forEach((opt) => {
+                    const val = String(opt);
+                    const label = document.createElement("label");
+                    label.className = "a-radio-option" + (savedVal === val ? " checked" : "") + (isDefault ? " disabled" : "");
+                    const input = document.createElement("input");
+                    input.type = "radio";
+                    input.name = "a-radio-choice";
+                    input.value = val;
+                    input.checked = savedVal === val;
+                    input.disabled = isDefault;
+                    input.addEventListener("change", function() {
+                        radioWrap.querySelectorAll(".a-radio-option").forEach((l) => l.classList.remove("checked"));
+                        label.classList.add("checked");
+                    });
+                    const span = document.createElement("span");
+                    span.textContent = val;
+                    label.appendChild(input);
+                    label.appendChild(span);
+                    radioWrap.appendChild(label);
+                });
             } else {
-                textarea.disabled = false;
-                if (saveBtn) saveBtn.disabled = false;
+                textarea.style.display = "";
+                textarea.disabled = isDefault;
+                textarea.value = item.a || "";
+                radioWrap.classList.remove("visible");
+                radioWrap.innerHTML = "";
             }
+            
+            if (saveBtn) saveBtn.disabled = isDefault;
         }
 
         function prevQuestion() { 
@@ -879,7 +970,14 @@
                 const isDefault = isDefaultQuestion(questions[currentQIndex].q, currentOpenAnime);
                 if (isDefault) return;
                 
-                questions[currentQIndex].a = document.getElementById('a-input').value;
+                const item = questions[currentQIndex];
+                const hasOptions = item.options && Array.isArray(item.options) && item.options.length > 0;
+                if (hasOptions) {
+                    const checked = document.querySelector('#a-radio-wrap input[name="a-radio-choice"]:checked');
+                    item.a = checked ? checked.value : "";
+                } else {
+                    item.a = document.getElementById('a-input').value;
+                }
             }
         }
 
@@ -966,10 +1064,12 @@
                     questions.splice(defaultIndex, 1);
                 }
                 
-                // 새 질문 추가
+                // 새 질문 추가 (API 응답: { q, options? } 또는 문자열)
                 const startIndex = questions.length;
-                newQuestions.forEach((q) => {
-                    questions.push({ q: q.trim(), a: "" });
+                newQuestions.forEach((item) => {
+                    const q = typeof item === "string" ? item.trim() : (item?.q?.trim() || "");
+                    const options = typeof item === "object" && Array.isArray(item?.options) ? item.options : undefined;
+                    questions.push({ q, a: "", options });
                 });
                 
                 // 생성된 질문 중 첫 번째로 이동

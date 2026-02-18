@@ -65,16 +65,41 @@ export default async function handler(req, res) {
 
     let questions = [];
     try {
-      const parsed = JSON.parse(raw);
-      questions = Array.isArray(parsed)
-        ? parsed.filter((q) => typeof q === "string").slice(0, 5)
-        : [];
+      let parsed;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (_) {
+        // LLM이 문자열 중간에 줄바꿈을 넣은 경우(예: "미 \n츠하의 사진") 재시도
+        parsed = JSON.parse(raw.replace(/\r?\n/g, " "));
+      }
+      if (!Array.isArray(parsed)) {
+        questions = [];
+      } else {
+        questions = parsed.slice(0, 5).map((item) => {
+          if (typeof item === "string") {
+            return { q: item.trim(), options: undefined };
+          }
+          if (item && typeof item === "object" && typeof item.q === "string") {
+            const opts = Array.isArray(item.options)
+              ? item.options
+                  .filter((o) => typeof o === "string")
+                  .map((o) => String(o).replace(/\s+/g, " ").trim())
+                  .filter(Boolean)
+                  .slice(0, 10)
+              : undefined;
+            return { q: item.q.trim(), options: opts?.length ? opts : undefined };
+          }
+          return null;
+        }).filter(Boolean);
+      }
     } catch (parseError) {
-      questions = raw
+      const fallback = raw
         .split("\n")
         .map((s) => s.trim())
         .filter((s) => s && !s.startsWith("```") && s.length > 0)
-        .slice(0, 5);
+        .slice(0, 5)
+        .map((s) => ({ q: s.replace(/^["']|["']$/g, ""), options: undefined }));
+      questions = fallback;
     }
     res.json({ questions });
   } catch (err) {
