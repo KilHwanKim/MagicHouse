@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google AdSense 테스트 — Arcane Archive</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google AdSense: 발행자 ID를 본인 계정 값으로 교체하세요. -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3543643898299039" crossorigin="anonymous"></script>
+</head>
+<body class="bg-stone-900 text-stone-100 min-h-screen p-6">
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-2xl font-bold mb-2">Google AdSense 테스트</h1>
+    <p class="text-stone-400 text-sm mb-6">
+      AdSense 슬롯 표시 및 새로고침을 확인합니다. <code class="bg-stone-800 px-1 rounded">AD_CLIENT_ID</code>와 각 슬롯 ID를 AdSense 콘솔에서 발급받아 스크립트 상단에 입력하세요.
+    </p>
+
+    <div id="helpSection" class="mb-6 p-4 rounded-lg bg-amber-950/40 border border-amber-800/50 text-stone-300 text-sm space-y-4">
+      <div>
+        <h2 class="text-amber-500/90 font-semibold mb-2">실제 광고를 확인하려면</h2>
+        <ol class="list-decimal list-inside space-y-1 text-stone-400">
+          <li><a href="https://www.google.com/adsense" target="_blank" rel="noopener" class="text-amber-400 hover:underline">Google AdSense</a> 가입 후 사이트를 등록하고 승인을 받으세요.</li>
+          <li>AdSense 콘솔에서 <strong class="text-stone-300">광고 단위</strong>를 만든 뒤, <strong class="text-stone-300">발행자 ID</strong>(ca-pub-...)와 각 <strong class="text-stone-300">광고 단위 ID</strong>를 복사하세요.</li>
+          <li>이 페이지의 head script <code class="bg-stone-800 px-1 rounded">client=</code> 와 아래 스크립트 안 <code class="bg-stone-800 px-1 rounded">AD_CLIENT_ID</code>, <code class="bg-stone-800 px-1 rounded">AD_SLOTS</code> 에 그대로 붙여넣고 저장하세요.</li>
+          <li><strong class="text-stone-300">테스트 광고 표시</strong>를 켜면 localhost에서도 광고처럼 보이는 테스트 광고가 나와 배치를 확인할 수 있습니다. 실제 수익 광고는 승인된 도메인에 배포한 뒤 그 주소로 접속해야 합니다.</li>
+        </ol>
+      </div>
+      <div>
+        <h2 class="text-amber-500/90 font-semibold mb-2">광고가 안 보일 때</h2>
+        <ul class="list-disc list-inside space-y-1 text-stone-400">
+          <li><strong class="text-stone-300">ID 설정</strong> — head의 <code class="bg-stone-800 px-1 rounded">client=ca-pub-...</code> 와 스크립트 안 <code class="bg-stone-800 px-1 rounded">AD_CLIENT_ID</code>, <code class="bg-stone-800 px-1 rounded">AD_SLOTS</code> 를 본인 AdSense 발행자 ID·광고 단위 ID로 교체했는지 확인하세요.</li>
+          <li><strong class="text-stone-300">사이트 승인</strong> — AdSense에서 해당 사이트가 승인된 후에만 광고가 노출됩니다. 승인 전에는 빈 칸이 나올 수 있습니다.</li>
+          <li><strong class="text-stone-300">localhost</strong> — 실제 광고는 보통 등록된 도메인에서만 표시됩니다. 로컬에서는 <strong class="text-stone-300">테스트 광고 표시</strong>를 켜서 확인하세요.</li>
+          <li><strong class="text-stone-300">광고 차단기</strong> — 브라우저 확장 프로그램(AdBlock 등)을 끄거나 이 페이지를 예외로 두어 보세요.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="space-y-6 mb-8">
+      <section class="p-4 rounded-lg bg-stone-800/50 border border-stone-700">
+        <h2 class="text-lg font-semibold text-amber-600/90 mb-3">테스트 옵션</h2>
+        <div class="flex flex-wrap gap-4 items-center">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="chkShowBanner" checked class="rounded border-stone-600 bg-stone-800 text-amber-500 focus:ring-amber-500" />
+            <span class="text-stone-300">배너 광고 표시</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="chkShowSidebar" checked class="rounded border-stone-600 bg-stone-800 text-amber-500 focus:ring-amber-500" />
+            <span class="text-stone-300">사이드바 광고 표시</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer" title="localhost에서도 광고 배치 확인 가능 (수익 없음)">
+            <input type="checkbox" id="chkTestAds" checked class="rounded border-stone-600 bg-stone-800 text-amber-500 focus:ring-amber-500" />
+            <span class="text-stone-300">테스트 광고 표시</span>
+            <span class="text-stone-500 text-xs">(data-adtest=on)</span>
+          </label>
+          <button id="btnRefreshAds" class="py-2 px-4 rounded-lg bg-amber-600 hover:bg-amber-500 font-medium transition-colors text-sm">
+            광고 새로고침
+          </button>
+        </div>
+      </section>
+
+      <section class="p-4 rounded-lg bg-stone-800/50 border border-stone-700">
+        <h2 class="text-lg font-semibold text-stone-300 mb-3">배너 (728×90)</h2>
+        <div id="adBanner" class="min-h-[90px] flex items-center justify-center rounded border border-stone-600 bg-stone-800/50 overflow-hidden">
+          <!-- AdSense ins 주입 영역 -->
+        </div>
+      </section>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="md:col-span-2 space-y-4">
+          <section class="p-4 rounded-lg bg-stone-800/50 border border-stone-700">
+            <h2 class="text-lg font-semibold text-stone-300 mb-3">인피드/사각형 (300×250)</h2>
+            <div id="adInfeed" class="min-h-[250px] flex items-center justify-center rounded border border-stone-600 bg-stone-800/50 overflow-hidden">
+              <!-- AdSense ins 주입 영역 -->
+            </div>
+          </section>
+        </div>
+        <section class="p-4 rounded-lg bg-stone-800/50 border border-stone-700">
+          <h2 class="text-lg font-semibold text-stone-300 mb-3">사이드바 (160×600)</h2>
+          <div id="adSidebar" class="min-h-[600px] flex items-center justify-center rounded border border-stone-600 bg-stone-800/50 overflow-hidden">
+            <!-- AdSense ins 주입 영역 -->
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div id="status" class="mb-4 text-stone-400 text-sm min-h-[1.5rem]"></div>
+    <div id="nextStepBox" class="hidden mb-4 p-4 rounded-lg bg-amber-950/50 border border-amber-700/50 text-sm">
+      <p class="font-semibold text-amber-400 mb-1">지금 할 일: 광고 단위 ID 넣기</p>
+      <p class="text-stone-400 mb-2">발행자 ID는 이미 설정되어 있습니다. AdSense 콘솔에서 <strong class="text-stone-300">광고</strong> → <strong class="text-stone-300">광고 단위 기준</strong>으로 들어가 광고 단위를 만든 뒤, 코드에 나오는 <code class="bg-stone-800 px-1 rounded">data-ad-slot="숫자"</code> 값을 복사해 아래 <code class="bg-stone-800 px-1 rounded">AD_SLOTS</code> 에 넣어주세요. 우선 하나만 만들어서 세 칸에 같은 ID를 넣어도 됩니다.</p>
+      <p class="text-stone-500 text-xs">저장 후 페이지를 새로고침하고, <strong class="text-stone-400">테스트 광고 표시</strong>를 켜면 localhost에서도 광고가 보일 수 있습니다.</p>
+    </div>
+    <div id="adLog" class="p-4 rounded-lg bg-stone-950 border border-stone-700 text-xs text-stone-500 font-mono space-y-1 max-h-40 overflow-y-auto"></div>
+  </div>
+
+  <script>
+    // ========== AdSense 설정: AdSense 콘솔에서 발급한 값으로 교체하세요 ==========
+    // head의 script src에 있는 client= 값도 동일한 발행자 ID로 맞추세요.
+    const AD_CLIENT_ID = "ca-pub-3543643898299039";
+    const AD_SLOTS = {
+      banner: "3050573544",   // 테스트 수평형 (동일 단위 사용)
+      infeed: "3050573544",
+      sidebar: "3050573544",
+    };
+    // =========================================================================
+
+    const adBanner = document.getElementById("adBanner");
+    const adInfeed = document.getElementById("adInfeed");
+    const adSidebar = document.getElementById("adSidebar");
+    const chkShowBanner = document.getElementById("chkShowBanner");
+    const chkShowSidebar = document.getElementById("chkShowSidebar");
+    const chkTestAds = document.getElementById("chkTestAds");
+    const btnRefreshAds = document.getElementById("btnRefreshAds");
+    const status = document.getElementById("status");
+    const nextStepBox = document.getElementById("nextStepBox");
+    const adLog = document.getElementById("adLog");
+
+    const PLACEHOLDER_CLIENT = "ca-pub-XXXXXXXXXXXXXXXX";
+    const SLOTS_PLACEHOLDER =
+      AD_SLOTS.banner === "1234567890" &&
+      AD_SLOTS.infeed === "1234567891" &&
+      AD_SLOTS.sidebar === "1234567892";
+    const isPlaceholderConfig = () =>
+      AD_CLIENT_ID === PLACEHOLDER_CLIENT || SLOTS_PLACEHOLDER;
+
+    function log(msg) {
+      const line = document.createElement("div");
+      line.textContent = new Date().toLocaleTimeString("ko-KR") + " " + msg;
+      adLog.insertBefore(line, adLog.firstChild);
+    }
+
+    function showMockPlaceholder(container, label) {
+      if (!container) return;
+      container.innerHTML = `
+        <div class="text-center p-4 text-stone-500 border-2 border-dashed border-amber-800/50 rounded bg-stone-800/80">
+          <div class="text-amber-500/80 font-medium">[목업] ${label}</div>
+          <div class="text-stone-500 text-xs mt-1">발행자 ID·광고 단위 ID를 설정하면 실제 광고가 표시됩니다</div>
+        </div>
+      `;
+    }
+
+    function createIns(clientId, slotId, style, useTestAds) {
+      const ins = document.createElement("ins");
+      ins.className = "adsbygoogle";
+      ins.setAttribute("data-ad-client", clientId);
+      ins.setAttribute("data-ad-slot", slotId);
+      ins.setAttribute("data-ad-format", "auto");
+      if (useTestAds) ins.setAttribute("data-adtest", "on");
+      Object.assign(ins.style, style);
+      return ins;
+    }
+
+    function fillSlot(container, slotKey) {
+      if (!container || !AD_SLOTS[slotKey]) return;
+      container.innerHTML = "";
+
+      if (isPlaceholderConfig()) {
+        const labels = { banner: "728×90 배너", infeed: "300×250", sidebar: "160×600" };
+        showMockPlaceholder(container, labels[slotKey]);
+        return;
+      }
+
+      const style = slotKey === "banner"
+        ? { display: "block", minWidth: "728px", minHeight: "90px" }
+        : slotKey === "infeed"
+        ? { display: "inline-block", width: "300px", height: "250px" }
+        : { display: "inline-block", width: "160px", height: "600px" };
+      const useTestAds = chkTestAds && chkTestAds.checked;
+      const ins = createIns(AD_CLIENT_ID, AD_SLOTS[slotKey], style, useTestAds);
+      container.appendChild(ins);
+      try {
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+      } catch (e) {
+        log("AdSense push 오류: " + e.message);
+      }
+    }
+
+    function updateAds() {
+      const showBanner = chkShowBanner.checked;
+      const showSidebar = chkShowSidebar.checked;
+
+      adBanner.style.display = showBanner ? "flex" : "none";
+      if (showBanner) {
+        fillSlot(adBanner, "banner");
+        log("배너 슬롯 로드");
+      }
+
+      fillSlot(adInfeed, "infeed");
+      log("인피드 슬롯 로드");
+
+      adSidebar.style.display = showSidebar ? "flex" : "none";
+      if (showSidebar) {
+        fillSlot(adSidebar, "sidebar");
+        log("사이드바 슬롯 로드");
+      }
+
+      if (isPlaceholderConfig()) {
+        if (SLOTS_PLACEHOLDER && AD_CLIENT_ID !== PLACEHOLDER_CLIENT) {
+          nextStepBox.classList.remove("hidden");
+          status.textContent = "광고 단위 ID가 아직 기본값이라 광고가 나오지 않습니다. 위 '지금 할 일'대로 AdSense에서 광고 단위를 만들고 AD_SLOTS 값을 바꿔주세요.";
+        } else {
+          nextStepBox.classList.add("hidden");
+          status.textContent = "head의 script client= 와 AD_CLIENT_ID, AD_SLOTS 를 본인 AdSense 값으로 바꿔주세요.";
+        }
+        status.className = "mb-4 text-sm min-h-[1.5rem] text-amber-400/90";
+      } else {
+        nextStepBox.classList.add("hidden");
+        const testOn = chkTestAds && chkTestAds.checked;
+        status.textContent = testOn
+          ? "테스트 광고 모드로 요청했습니다. localhost에서도 광고가 보일 수 있습니다."
+          : "AdSense 슬롯을 요청했습니다. localhost에서는 '테스트 광고 표시'를 켜면 배치를 확인할 수 있습니다.";
+        status.className = "mb-4 text-sm min-h-[1.5rem] text-stone-400";
+      }
+    }
+
+    chkShowBanner.addEventListener("change", updateAds);
+    chkShowSidebar.addEventListener("change", updateAds);
+    chkTestAds.addEventListener("change", updateAds);
+    btnRefreshAds.addEventListener("click", () => {
+      log("새로고침 클릭");
+      updateAds();
+    });
+
+    updateAds();
+    log("페이지 로드 — Google AdSense 테스트");
+  </script>
+</body>
+</html>
