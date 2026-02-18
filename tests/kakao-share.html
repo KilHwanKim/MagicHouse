@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>카카오 공유 테스트 — Arcane Archive</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 카카오 SDK: 앱 JavaScript 키로 교체 후, 카카오 개발자 콘솔에서 이 도메인을 등록하세요. -->
+  <!-- 카카오 SDK v2: 최신 버전 사용 -->
+  <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.9/kakao.min.js" onload="onKakaoSDKLoaded()"></script>
+</head>
+<body class="bg-stone-900 text-stone-100 min-h-screen p-6">
+  <div class="max-w-2xl mx-auto">
+    <h1 class="text-2xl font-bold mb-2">카카오 공유 API 테스트</h1>
+    <p class="text-stone-400 text-sm mb-6">
+      버튼 클릭 시 카카오톡으로 공유됩니다. <a href="https://developers.kakao.com/console/app" target="_blank" rel="noopener" class="text-amber-400 hover:underline">카카오 개발자 콘솔</a>에서 JavaScript 키를 발급받고, <strong>플랫폼 → Web → 사이트 도메인</strong>에 이 페이지 도메인을 추가하세요.
+    </p>
+
+    <div class="mb-6 p-4 rounded-lg bg-amber-950/40 border border-amber-800/50 text-stone-300 text-sm">
+      <h2 class="text-amber-500/90 font-semibold mb-2">설정</h2>
+      <p class="mb-2">아래 <code class="bg-stone-800 px-1 rounded">KAKAO_JS_KEY</code>를 본인 앱의 JavaScript 키로 바꾸세요. (미설정 시 버튼 클릭 시 안내 메시지가 나옵니다.)</p>
+      <p class="text-stone-500 text-xs">공유 시 제목·설명·링크는 아래 입력값 또는 기본값이 사용됩니다.</p>
+    </div>
+
+    <section class="mb-8 p-4 rounded-lg bg-stone-800/50 border border-stone-700">
+      <h2 class="text-lg font-semibold text-stone-300 mb-4">공유할 내용 (선택)</h2>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-stone-400 text-sm mb-1">제목</label>
+          <input type="text" id="shareTitle" value="Arcane Archive - 전설의 대도서관" placeholder="공유 제목"
+            class="w-full rounded-lg bg-stone-800 border border-stone-600 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 text-stone-100" />
+        </div>
+        <div>
+          <label class="block text-stone-400 text-sm mb-1">설명</label>
+          <textarea id="shareDesc" rows="2" placeholder="공유 설명"
+            class="w-full rounded-lg bg-stone-800 border border-stone-600 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 text-stone-100 resize-none">나만의 서재에 기록을 남겨보세요.</textarea>
+        </div>
+        <div>
+          <label class="block text-stone-400 text-sm mb-1">링크 (비우면 현재 페이지 URL 사용)</label>
+          <input type="url" id="shareLink" value="" placeholder="https://..."
+            class="w-full rounded-lg bg-stone-800 border border-stone-600 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 text-stone-100" />
+        </div>
+      </div>
+    </section>
+
+    <section class="mb-8 p-4 rounded-lg bg-stone-800/50 border border-stone-700">
+      <h2 class="text-lg font-semibold text-stone-300 mb-4">공유 버튼</h2>
+      <div class="flex flex-wrap gap-4">
+        <button type="button" id="btnShareFeed" class="px-6 py-3 rounded-lg bg-yellow-500 hover:bg-yellow-400 text-stone-900 font-semibold transition-colors">
+          카카오톡으로 공유 (피드)
+        </button>
+        <button type="button" id="btnShareText" class="px-6 py-3 rounded-lg bg-stone-600 hover:bg-stone-500 text-stone-100 font-semibold transition-colors">
+          카카오톡으로 공유 (텍스트)
+        </button>
+      </div>
+    </section>
+
+    <div id="status" class="mb-4 text-stone-400 text-sm min-h-[1.5rem]"></div>
+    
+    <div class="mb-4 p-3 rounded-lg bg-stone-800/50 border border-stone-600 text-xs">
+      <div class="font-semibold text-stone-300 mb-1">현재 페이지 정보:</div>
+      <div id="currentUrlInfo" class="text-stone-400 font-mono break-all"></div>
+      <div class="mt-2 text-stone-500 text-xs">↑ 이 URL을 카카오 개발자 콘솔에 <strong>정확히</strong> 등록하세요.</div>
+      <div class="mt-3 p-2 rounded bg-red-950/30 border border-red-800/50 text-red-300 text-xs">
+        <strong>중요:</strong> sendDefault가 undefined를 반환하면 도메인 미등록 또는 형식 불일치입니다.<br/>
+        카카오 개발자 콘솔 → 플랫폼 → Web → 사이트 도메인에 <strong>위 Origin 값</strong>을 <strong>그대로</strong> 복사해서 등록하세요.
+      </div>
+    </div>
+    
+    <div id="log" class="p-4 rounded-lg bg-stone-950 border border-stone-700 text-xs text-stone-500 font-mono space-y-1 max-h-40 overflow-y-auto"></div>
+  </div>
+
+  <script>
+    // ========== 카카오 앱 JavaScript 키 (카카오 개발자 콘솔에서 복사) ==========
+    const KAKAO_JS_KEY = "86c970301f4b0615eed3d884119a295a";
+    // =========================================================================
+
+    const status = document.getElementById("status");
+    const logEl = document.getElementById("log");
+    let kakaoSDKReady = false;
+
+    // SDK 로드 완료 콜백
+    function onKakaoSDKLoaded() {
+      log("카카오 SDK 스크립트 로드 완료");
+      if (window.Kakao) {
+        log("Kakao 객체 확인됨");
+        // SDK 초기화 (Share 모듈 활성화를 위해)
+        if (KAKAO_JS_KEY && !window.Kakao.isInitialized()) {
+          window.Kakao.init(KAKAO_JS_KEY);
+          log("Kakao SDK 초기화 완료");
+        }
+        // 모듈 확인
+        setTimeout(function() {
+          if (window.Kakao.Share) {
+            kakaoSDKReady = true;
+            log("Kakao.Share 모듈 사용 가능");
+            setStatus("카카오 SDK 준비 완료. 버튼을 눌러 공유를 테스트하세요.");
+          } else {
+            log("Kakao.Share 모듈 없음 - 사용 가능한 모듈: " + Object.keys(window.Kakao).join(", "), true);
+            setStatus("Kakao.Share 모듈을 찾을 수 없습니다. SDK 버전을 확인하세요.", true);
+          }
+        }, 100);
+      } else {
+        log("Kakao 객체 없음", true);
+      }
+    }
+
+    function log(msg, isError = false) {
+      const line = document.createElement("div");
+      line.textContent = new Date().toLocaleTimeString("ko-KR") + " " + msg;
+      line.className = isError ? "text-red-400" : "";
+      logEl.insertBefore(line, logEl.firstChild);
+    }
+
+    function getShareLink() {
+      const input = document.getElementById("shareLink").value.trim();
+      return input || window.location.href;
+    }
+
+    function setStatus(text, isError = false) {
+      status.textContent = text;
+      status.className = "mb-4 text-sm min-h-[1.5rem] " + (isError ? "text-red-400" : "text-stone-400");
+    }
+
+    function initKakao() {
+      if (!KAKAO_JS_KEY) {
+        setStatus("KAKAO_JS_KEY를 설정해 주세요. (스크립트 상단)", true);
+        return false;
+      }
+      if (!window.Kakao) {
+        setStatus("카카오 SDK를 불러오지 못했습니다. 스크립트 URL 또는 네트워크를 확인하세요.", true);
+        log("Kakao SDK 미로드", true);
+        return false;
+      }
+      if (!window.Kakao.Share) {
+        setStatus("Kakao.Share 모듈을 찾을 수 없습니다. SDK 버전을 확인하세요.", true);
+        log("Kakao.Share 없음 - 사용 가능한 모듈: " + Object.keys(window.Kakao).join(", "), true);
+        return false;
+      }
+      if (!window.Kakao.Share.sendDefault) {
+        setStatus("Kakao.Share.sendDefault 함수를 찾을 수 없습니다.", true);
+        log("sendDefault 함수 없음", true);
+        return false;
+      }
+      if (!window.Kakao.isInitialized()) {
+        window.Kakao.init(KAKAO_JS_KEY);
+        log("Kakao SDK 초기화 완료");
+      }
+      return true;
+    }
+
+    function shareFeed() {
+      if (!kakaoSDKReady) {
+        setStatus("카카오 SDK가 아직 준비되지 않았습니다. 잠시 후 다시 시도하세요.", true);
+        return;
+      }
+      if (!initKakao()) return;
+      const title = document.getElementById("shareTitle").value.trim() || "Arcane Archive";
+      const desc = document.getElementById("shareDesc").value.trim() || "나만의 서재에 기록을 남겨보세요.";
+      const linkUrl = getShareLink();
+
+      setStatus("공유 창을 여는 중…");
+      log("sendDefault(feed): " + title);
+      
+      // 디버깅: sendDefault가 함수인지 확인
+      if (typeof window.Kakao.Share.sendDefault !== "function") {
+        setStatus("sendDefault가 함수가 아닙니다. SDK 버전을 확인하세요.", true);
+        log("sendDefault 타입: " + typeof window.Kakao.Share.sendDefault, true);
+        return;
+      }
+
+      try {
+        const shareResult = window.Kakao.Share.sendDefault({
+          objectType: "feed",
+          content: {
+            title: title,
+            description: desc,
+            imageUrl: "https://developers.kakao.com/assets/img/about/logos/kakaolink/kakaolink_bi_medium.png",
+            link: {
+              mobileWebUrl: linkUrl,
+              webUrl: linkUrl,
+            },
+          },
+          buttons: [
+            {
+              title: "웹에서 보기",
+              link: {
+                mobileWebUrl: linkUrl,
+                webUrl: linkUrl,
+              },
+            },
+          ],
+        });
+        
+        // sendDefault는 공유 창을 열고 Promise를 반환합니다.
+        // 공유 창이 열리면 성공한 것이므로, 반환값이 없어도 공유는 동작할 수 있습니다.
+        if (shareResult && typeof shareResult.then === "function") {
+          // Promise가 반환된 경우 성공/실패 처리
+          shareResult
+            .then(function () {
+              setStatus("공유 요청이 완료되었습니다.");
+              log("공유 성공");
+            })
+            .catch(function (err) {
+              const errMsg = err?.msg || err?.message || String(err);
+              setStatus("공유 실패: " + errMsg, true);
+              log("공유 실패: " + JSON.stringify(err), true);
+              if (errMsg.includes("domain") || errMsg.includes("401") || err?.code === -401) {
+                log("→ 도메인 불일치 에러입니다. 카카오 개발자 콘솔에서 사이트 도메인을 확인하세요.", true);
+                log("→ 등록해야 할 값: " + window.location.origin, true);
+              }
+            });
+        } else {
+          // Promise가 반환되지 않았지만 공유 창이 열릴 수 있음 (SDK 내부 처리)
+          setStatus("공유 창을 열었습니다. 카카오톡에서 공유를 완료하세요.");
+          log("sendDefault 호출 완료 (반환값: " + typeof shareResult + ")");
+          log("공유 창이 열렸다면 정상 동작입니다.");
+        }
+      } catch (err) {
+        setStatus("공유 요청 중 오류: " + (err?.message || String(err)), true);
+        log("예외 발생: " + JSON.stringify(err), true);
+      }
+      
+    }
+
+    function shareText() {
+      if (!kakaoSDKReady) {
+        setStatus("카카오 SDK가 아직 준비되지 않았습니다. 잠시 후 다시 시도하세요.", true);
+        return;
+      }
+      if (!initKakao()) return;
+      const title = document.getElementById("shareTitle").value.trim() || "Arcane Archive";
+      const desc = document.getElementById("shareDesc").value.trim() || "나만의 서재에 기록을 남겨보세요.";
+      const linkUrl = getShareLink();
+      const text = title + "\n\n" + desc;
+
+      setStatus("공유 창을 여는 중…");
+      log("sendDefault(text)");
+      
+      try {
+        const shareResult = window.Kakao.Share.sendDefault({
+          objectType: "text",
+          text: text.slice(0, 200),
+          link: {
+            mobileWebUrl: linkUrl,
+            webUrl: linkUrl,
+          },
+        });
+        
+        // sendDefault는 공유 창을 열고 Promise를 반환합니다.
+        if (shareResult && typeof shareResult.then === "function") {
+          shareResult
+            .then(function () {
+              setStatus("공유 요청이 완료되었습니다.");
+              log("공유 성공");
+            })
+            .catch(function (err) {
+              const errMsg = err?.msg || err?.message || String(err);
+              setStatus("공유 실패: " + errMsg, true);
+              log("공유 실패: " + JSON.stringify(err), true);
+              if (errMsg.includes("domain") || errMsg.includes("401") || err?.code === -401) {
+                log("→ 도메인 불일치 에러입니다. 카카오 개발자 콘솔에서 사이트 도메인을 확인하세요.", true);
+                log("→ 등록해야 할 값: " + window.location.origin, true);
+              }
+            });
+        } else {
+          setStatus("공유 창을 열었습니다. 카카오톡에서 공유를 완료하세요.");
+          log("sendDefault 호출 완료 (반환값: " + typeof shareResult + ")");
+          log("공유 창이 열렸다면 정상 동작입니다.");
+        }
+      } catch (err) {
+        setStatus("공유 요청 중 오류: " + (err?.message || String(err)), true);
+        log("예외 발생: " + JSON.stringify(err), true);
+      }
+    }
+
+    document.getElementById("btnShareFeed").addEventListener("click", shareFeed);
+    document.getElementById("btnShareText").addEventListener("click", shareText);
+
+    // 페이지 로드 시 현재 URL 확인
+    window.addEventListener("load", function() {
+      const currentUrl = window.location.origin; // http://localhost:3000
+      const fullUrl = window.location.href;
+      document.getElementById("currentUrlInfo").textContent = 
+        "Origin: " + currentUrl + "\nFull URL: " + fullUrl;
+      log("현재 페이지 Origin: " + currentUrl);
+      log("카카오 개발자 콘솔 → 플랫폼 → Web → 사이트 도메인에 '" + currentUrl + "' 를 등록하세요.");
+      
+      // SDK가 이미 로드된 경우 (스크립트가 빠르게 로드된 경우)
+      if (window.Kakao) {
+        onKakaoSDKLoaded();
+      } else {
+        log("카카오 SDK 로드 대기 중...");
+      }
+    });
+
+    if (KAKAO_JS_KEY) {
+      setStatus("키가 설정되어 있습니다. 버튼을 눌러 공유를 테스트하세요.");
+    } else {
+      setStatus("KAKAO_JS_KEY를 입력한 뒤 버튼을 사용하세요.", true);
+    }
+    log("페이지 로드 — 카카오 공유 테스트");
+  </script>
+</body>
+</html>

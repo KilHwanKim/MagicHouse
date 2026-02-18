@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Arcane Archive - 전설의 대도서관</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.9/kakao.min.js" onload="onKakaoSDKLoaded()"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&family=Nanum+Brush+Script&display=swap');
 
@@ -379,6 +381,30 @@
         }
 
         .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+        /* 공유용 카드 (html2canvas 캡처 대상) - 화면 안에서 렌더링해야 전체 캡처됨 */
+        .share-card-wrapper {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            overflow: visible;
+            pointer-events: none;
+        }
+        .share-card {
+            width: 600px;
+            padding: 32px 40px;
+            background: linear-gradient(to bottom, #e8dec9, #d4c4a8);
+            color: #2d241e;
+            font-family: 'Noto Serif KR', serif;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            border: 1px solid rgba(54, 36, 26, 0.15);
+            overflow: visible;
+        }
+        .share-card-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid rgba(197, 160, 89, 0.5); }
+        .share-card-q { font-size: 15px; font-weight: bold; color: #4a342e; margin-bottom: 12px; line-height: 1.5; }
+        .share-card-a { font-size: 14px; line-height: 1.6; color: #36241a; white-space: pre-wrap; word-break: break-word; overflow: visible; }
+        .share-card-brand { margin-top: 20px; font-size: 11px; color: rgba(54, 36, 26, 0.6); letter-spacing: 0.1em; }
     </style>
 </head>
 <body class="p-4 md:p-10 pt-10">
@@ -394,9 +420,12 @@
                 <h3 class="text-xl md:text-2xl font-bold tracking-[0.2em] text-stone-400 uppercase">The Eternal Records</h3>
                 <span id="book-count" class="text-[10px] bg-stone-900 text-stone-500 px-3 py-1 border border-stone-800 font-bold uppercase tracking-widest">Volumes: 0</span>
             </div>
-            <button onclick="getAiRecommendation()" class="gold-btn text-[10px] tracking-widest px-4 py-2">
-                🔮 운명의 계시
-            </button>
+            <div class="flex gap-2">
+                <button type="button" onclick="shareSiteFeed()" class="gold-btn text-[10px] tracking-widest px-4 py-2" title="사이트를 카카오톡으로 공유">📤 사이트 공유</button>
+                <button onclick="getAiRecommendation()" class="gold-btn text-[10px] tracking-widest px-4 py-2">
+                    🔮 운명의 계시
+                </button>
+            </div>
         </div>
 
         <!-- 3단 서재 선반 구역 -->
@@ -429,6 +458,7 @@
                     <div class="relative group">
                         <div id="q-text" class="text-lg font-bold border-l-4 border-[#c5a059]/50 pl-6 py-2 italic text-[#4a342e] pr-12">질문이 표시됩니다.</div>
                         <button 
+                            id="q-delete-btn"
                             onclick="deleteCurrentQuestion()" 
                             class="absolute top-2 right-2 opacity-70 hover:opacity-100 transition-opacity text-[#36241a]/60 hover:text-red-600 text-xl font-bold p-1 rounded hover:bg-red-50"
                             title="질문 삭제"
@@ -454,6 +484,10 @@
                 </div>
                 <div class="mt-6 flex justify-end gap-3 items-center">
                     <button id="save-answer-btn" onclick="saveCurrentAnswer(); saveToLocalStorage();" class="gold-btn text-[10px] px-6 py-2">봉인 완료</button>
+                </div>
+                <div class="mt-4 flex justify-end gap-2 flex-wrap">
+                    <button type="button" id="share-qa-btn" onclick="shareQuestionAnswerFeed()" class="gold-btn text-[10px] px-4 py-2" title="질문과 답변을 이미지로 카카오톡 공유">📜 이미지로 공유</button>
+                    <button type="button" id="share-qa-link-btn" onclick="shareQuestionAnswerAsLink()" class="gold-btn text-[10px] px-4 py-2" title="질문과 답변 링크를 카카오톡 공유">🔗 링크로 공유</button>
                 </div>
                 <div class="mt-4 pt-4 border-t border-[#36241a]/5 flex justify-between items-center text-[9px] text-[#36241a]/40 font-bold tracking-[0.2em] uppercase">
                     <span>Fragment #ARC-9</span>
@@ -1114,6 +1148,269 @@
             textField.innerText = res.trim();
         }
         function closeRecommendation() { document.getElementById('recommendation-overlay').style.display = 'none'; }
+
+        // ========== 카카오톡 공유 (.env의 KAKAO_JS_KEY 사용) ==========
+        let kakaoJsKey = "";
+        const SHARE_IMAGE_URL = "https://developers.kakao.com/assets/img/about/logos/kakaolink/kakaolink_bi_medium.png";
+        const DESC_MAX_LEN = 400;
+        let kakaoSDKReady = false;
+
+        function tryInitKakao() {
+            if (window.Kakao && kakaoJsKey && !window.Kakao.isInitialized()) {
+                window.Kakao.init(kakaoJsKey);
+            }
+        }
+
+        function onKakaoSDKLoaded() {
+            tryInitKakao();
+            if (window.Kakao && window.Kakao.Share) {
+                kakaoSDKReady = true;
+            }
+        }
+
+        function getShareLink() {
+            return window.location.origin + "/";
+        }
+
+        function initKakao() {
+            if (!kakaoJsKey) return false;
+            if (!window.Kakao) return false;
+            if (!window.Kakao.Share) return false;
+            if (!window.Kakao.Share.sendDefault) return false;
+            if (!window.Kakao.isInitialized()) {
+                window.Kakao.init(kakaoJsKey);
+            }
+            return true;
+        }
+
+        function shareSiteFeed() {
+            if (!kakaoSDKReady) {
+                alert("카카오 SDK가 아직 준비되지 않았습니다. 잠시 후 다시 시도하세요.");
+                return;
+            }
+            if (!initKakao()) {
+                alert("카카오 SDK를 불러올 수 없습니다. 네트워크를 확인하거나, 카카오 개발자 콘솔에서 사이트 도메인을 등록해 주세요.");
+                return;
+            }
+            const linkUrl = getShareLink();
+            const title = "Arcane Archive - 전설의 대도서관";
+            const desc = "나만의 서재에 기록을 남겨보세요.";
+
+            if (typeof window.Kakao.Share.sendDefault !== "function") {
+                alert("sendDefault 함수를 찾을 수 없습니다. SDK 버전을 확인하세요.");
+                return;
+            }
+
+            try {
+                const shareResult = window.Kakao.Share.sendDefault({
+                    objectType: "feed",
+                    content: {
+                        title: title,
+                        description: desc,
+                        imageUrl: SHARE_IMAGE_URL,
+                        link: { mobileWebUrl: linkUrl, webUrl: linkUrl },
+                    },
+                    buttons: [{
+                        title: "웹에서 보기",
+                        link: { mobileWebUrl: linkUrl, webUrl: linkUrl },
+                    }],
+                });
+                if (shareResult && typeof shareResult.then === "function") {
+                    shareResult.catch(function (err) {
+                        const errMsg = err?.msg || err?.message || String(err);
+                        if (errMsg.includes("domain") || errMsg.includes("401") || err?.code === -401) {
+                            alert("도메인 미등록 에러입니다. 카카오 개발자 콘솔에서 사이트 도메인(" + window.location.origin + ")을 등록해 주세요.");
+                        } else {
+                            alert("공유 실패: " + errMsg);
+                        }
+                    });
+                }
+            } catch (err) {
+                alert("공유 요청 중 오류: " + (err?.message || String(err)));
+            }
+        }
+
+        async function shareQuestionAnswerFeed() {
+            saveCurrentAnswer();
+            if (!kakaoSDKReady) {
+                alert("카카오 SDK가 아직 준비되지 않았습니다. 잠시 후 다시 시도하세요.");
+                return;
+            }
+            if (!initKakao()) {
+                alert("카카오 SDK를 불러올 수 없습니다. 네트워크를 확인하거나, 카카오 개발자 콘솔에서 사이트 도메인을 등록해 주세요.");
+                return;
+            }
+            if (!currentOpenAnime) return;
+            const questions = getQuestionsForTitle(currentOpenAnime);
+            const item = questions?.[currentQIndex];
+            if (!item) {
+                alert("공유할 질문과 답변이 없습니다.");
+                return;
+            }
+            const q = (item.q || "").trim();
+            const a = (item.a || "").trim();
+            if (!q) {
+                alert("공유할 질문이 없습니다.");
+                return;
+            }
+            const titleText = `${currentOpenAnime} | ${q.length > 50 ? q.slice(0, 47) + "…" : q}`.slice(0, 200);
+            const linkUrl = getShareLink();
+
+            if (typeof window.Kakao.Share.sendDefault !== "function") {
+                alert("sendDefault 함수를 찾을 수 없습니다. SDK 버전을 확인하세요.");
+                return;
+            }
+            if (typeof html2canvas !== "function") {
+                alert("이미지 생성 라이브러리를 불러올 수 없습니다.");
+                return;
+            }
+
+            const shareBtn = document.getElementById("share-qa-btn");
+            if (shareBtn) {
+                shareBtn.disabled = true;
+                shareBtn.textContent = "📜 이미지 생성 중...";
+            }
+
+            const pageLeft = document.querySelector("#book-modal .page-left");
+            if (!pageLeft) {
+                alert("공유할 질문 영역을 찾을 수 없습니다.");
+                if (shareBtn) { shareBtn.disabled = false; shareBtn.textContent = "📜 이미지로 공유"; }
+                return;
+            }
+
+            const deleteBtn = document.getElementById("q-delete-btn");
+            const origDelDisplay = deleteBtn ? deleteBtn.style.display : "";
+            if (deleteBtn) deleteBtn.style.display = "none";
+
+            const origOverflow = pageLeft.style.overflowY;
+            pageLeft.style.overflowY = "visible";
+
+            await new Promise(function (r) { requestAnimationFrame(function () { requestAnimationFrame(r); }); });
+
+            const elWidth = pageLeft.offsetWidth || 400;
+            const elHeight = pageLeft.scrollHeight || pageLeft.offsetHeight;
+            const scale = elHeight > 1200 ? 1 : 2;
+
+            try {
+                const canvas = await html2canvas(pageLeft, {
+                    width: elWidth,
+                    height: elHeight,
+                    scale: scale,
+                    useCORS: true,
+                    backgroundColor: "#e8dec9",
+                    logging: false,
+                });
+                pageLeft.style.overflowY = origOverflow;
+                if (deleteBtn) deleteBtn.style.display = origDelDisplay;
+
+                const imageUrl = await new Promise(function (resolve, reject) {
+                    canvas.toBlob(
+                        function (blob) {
+                            if (!blob) {
+                                reject(new Error("이미지 생성 실패"));
+                                return;
+                            }
+                            const file = new File([blob], "share.png", {
+                                type: "image/png",
+                                lastModified: Date.now(),
+                            });
+                            if (!window.Kakao?.Share?.uploadImage) {
+                                resolve(SHARE_IMAGE_URL);
+                                return;
+                            }
+                            window.Kakao.Share.uploadImage({ file: [file] })
+                                .then(function (res) {
+                                    resolve(res?.infos?.original?.url || SHARE_IMAGE_URL);
+                                })
+                                .catch(function () {
+                                    resolve(SHARE_IMAGE_URL);
+                                });
+                        },
+                        "image/png",
+                        0.95
+                    );
+                });
+
+                const shareResult = window.Kakao.Share.sendDefault({
+                    objectType: "feed",
+                    content: {
+                        title: titleText,
+                        description: "나만의 서재에 기록을 남겨보세요.",
+                        imageUrl: imageUrl,
+                        link: { mobileWebUrl: linkUrl, webUrl: linkUrl },
+                    },
+                    buttons: [{
+                        title: "웹에서 보기",
+                        link: { mobileWebUrl: linkUrl, webUrl: linkUrl },
+                    }],
+                });
+                if (shareResult && typeof shareResult.then === "function") {
+                    shareResult.catch(function (err) {
+                        const errMsg = err?.msg || err?.message || String(err);
+                        if (errMsg.includes("domain") || errMsg.includes("401") || err?.code === -401) {
+                            alert("도메인 미등록 에러입니다. 카카오 개발자 콘솔에서 사이트 도메인(" + window.location.origin + ")을 등록해 주세요.");
+                        } else {
+                            alert("공유 실패: " + errMsg);
+                        }
+                    });
+                }
+            } catch (err) {
+                pageLeft.style.overflowY = origOverflow;
+                if (deleteBtn) deleteBtn.style.display = origDelDisplay;
+                alert("이미지 생성 또는 공유 중 오류: " + (err?.message || String(err)));
+            } finally {
+                if (shareBtn) {
+                    shareBtn.disabled = false;
+                    shareBtn.textContent = "📜 질문+답 공유";
+                }
+            }
+        }
+
+        function shareQuestionAnswerAsLink() {
+            saveCurrentAnswer();
+            if (!kakaoSDKReady || !initKakao()) {
+                alert("카카오 SDK를 불러올 수 없습니다.");
+                return;
+            }
+            if (!currentOpenAnime) return;
+            const questions = getQuestionsForTitle(currentOpenAnime);
+            const item = questions?.[currentQIndex];
+            if (!item) {
+                alert("공유할 답변이 없습니다.");
+                return;
+            }
+            const a = (item.a || "").trim();
+            if (!a) {
+                alert("공유할 답변을 먼저 입력해 주세요.");
+                return;
+            }
+            const base = window.location.origin + "/share.html";
+            const shareUrl = base + "?title=" + encodeURIComponent(currentOpenAnime) + "&a=" + encodeURIComponent(a);
+            if (shareUrl.length > 1800) {
+                alert("내용이 너무 길어 링크 공유가 어렵습니다. 이미지로 공유해 주세요.");
+                return;
+            }
+            if (!window.Kakao.Share.sendScrap) {
+                alert("스크랩 공유를 지원하지 않는 환경입니다.");
+                return;
+            }
+            try {
+                window.Kakao.Share.sendScrap({ requestUrl: shareUrl });
+            } catch (err) {
+                alert("공유 중 오류: " + (err?.message || String(err)));
+            }
+        }
+
+        window.addEventListener("load", function () {
+            fetch("/api/config")
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    kakaoJsKey = (data.kakaoJsKey || "").trim();
+                    tryInitKakao();
+                })
+                .catch(function () {});
+            if (window.Kakao) onKakaoSDKLoaded();
+        });
     </script>
 </body>
 </html>

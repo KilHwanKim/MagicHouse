@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arcane Archive — 기록 공유</title>
+    <meta property="og:title" content="Arcane Archive — 전설의 대도서관">
+    <meta property="og:description" content="나만의 서재에 기록을 남겨보세요.">
+    <meta property="og:url" content="">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Noto Serif KR', serif;
+            min-height: 100vh;
+            background: linear-gradient(to bottom, #1a1a24 0%, #08080a 100%);
+            color: #e2e2e2;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card {
+            max-width: 560px;
+            width: 100%;
+            padding: 40px 36px;
+            background: linear-gradient(to bottom, #e8dec9, #d4c4a8);
+            color: #2d241e;
+            border-radius: 12px;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+            border: 1px solid rgba(197, 160, 89, 0.3);
+        }
+        .card-title { font-size: 20px; font-weight: bold; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid rgba(197, 160, 89, 0.5); }
+        .card-q { font-size: 16px; font-weight: bold; color: #4a342e; margin-bottom: 16px; line-height: 1.6; }
+        .card-a { font-size: 15px; line-height: 1.7; color: #36241a; white-space: pre-wrap; word-break: break-word; }
+        .card-brand { margin-top: 28px; font-size: 12px; color: rgba(54, 36, 26, 0.6); letter-spacing: 0.15em; }
+        .card-brand a { color: rgba(197, 160, 89, 0.9); text-decoration: none; }
+        .card-brand a:hover { text-decoration: underline; }
+        .empty { color: rgba(54, 36, 26, 0.5); text-align: center; padding: 48px 24px; }
+    </style>
+</head>
+<body>
+    <div class="card" id="content">
+        <div class="empty">공유된 기록이 없습니다.</div>
+    </div>
+    <script>
+        (function () {
+            const params = new URLSearchParams(location.search);
+            const title = params.get("title") || "";
+            const q = params.get("q") || "";
+            const a = params.get("a") || "";
+
+            function escapeHtml(s) {
+                const div = document.createElement("div");
+                div.textContent = s;
+                return div.innerHTML;
+            }
+
+            const el = document.getElementById("content");
+            if (!title && !q && !a) {
+                el.innerHTML = '<div class="empty">공유된 기록이 없습니다.<br><br><a href="/" style="color:rgba(197,160,89,0.9);">Arcane Archive로 이동</a></div>';
+                return;
+            }
+
+            el.innerHTML =
+                (title ? '<div class="card-title">' + escapeHtml(title) + '</div>' : '') +
+                '<div class="card-a">' + escapeHtml(a || "(답변 없음)") + '</div>' +
+                '<div class="card-brand">Arcane Archive — <a href="/">전설의 대도서관</a></div>';
+        })();
+    </script>
+</body>
+</html>

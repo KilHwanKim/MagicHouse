@@ -2,3 +2,5 @@ node_modules/
 .env
 .vercel
 .cursorrules
+.env.example
+.env.example

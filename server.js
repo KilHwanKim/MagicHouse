@@ -15,6 +15,13 @@ app.use(express.json());
 app.use(express.static(__dirname));
 app.use("/tests", express.static(path.join(__dirname, "tests")));
 
+// 카카오 공유용 설정 (클라이언트에서 사용)
+app.get("/api/config", (req, res) => {
+  res.json({
+    kakaoJsKey: process.env.KAKAO_JS_KEY || "",
+  });
+});
+
 // TMDB 검색 프록시 (API 키 노출 방지)
 app.get("/api/tmdb/search", async (req, res) => {
   const key = process.env.TMDB_API_KEY;
@@ -159,6 +166,7 @@ if (typeof process !== "undefined" && process.env.VERCEL !== "1") {
     console.log(`질문 생성 테스트: http://localhost:${PORT}/tests/generate-questions.html`);
     console.log(`로컬 스토리지 테스트: http://localhost:${PORT}/tests/local-storage.html`);
     console.log(`광고 테스트: http://localhost:${PORT}/tests/ad.html`);
+  console.log(`카카오 공유 테스트: http://localhost:${PORT}/tests/kakao-share.html`);
   });
 }
 
