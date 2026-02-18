@@ -276,6 +276,35 @@
             .books-wrapper { gap: 5px; }
         }
 
+        /* 모바일 반응형 */
+        @media (max-width: 768px) {
+            body { padding: 0.75rem; padding-top: 1rem; }
+            main { padding: 0 0.5rem; }
+            .shelf-container { gap: 24px; margin-bottom: 48px; }
+            .shelf-row { padding: 0 8px; }
+            .books-wrapper { overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
+            .books-wrapper::-webkit-scrollbar { height: 4px; }
+            .stone-stair { height: 20px; }
+            .book-page { padding: 16px; }
+            #book-title { font-size: 1.25rem; margin-bottom: 1rem; }
+            #q-text { font-size: 0.95rem; padding-left: 1rem; }
+            .mana-input { padding: 8px; font-size: 14px; min-height: 80px; }
+            .ancient-slab { padding: 24px 20px; max-height: 85vh; }
+            .search-result-item { flex-direction: column; gap: 12px; padding: 12px; }
+            .search-result-poster, .search-result-poster-placeholder { width: 100%; height: auto; aspect-ratio: 2/3; max-width: 120px; margin: 0 auto; }
+        }
+        @media (max-width: 480px) {
+            body { padding: 0.5rem; }
+            main > div:first-child { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+            main > div:first-child h3 { font-size: 0.9rem; letter-spacing: 0.1em; }
+            .gold-btn { padding: 6px 12px; font-size: 9px; }
+            .open-book { padding: 0 12px; }
+            #book-modal .flex.justify-end.gap-2.flex-wrap { flex-direction: column; }
+            #book-modal .flex.justify-end.gap-2.flex-wrap .gold-btn { width: 100%; }
+            #tmdb-search-modal .flex.gap-2 { flex-direction: column; }
+            #tmdb-search-btn { width: 100%; }
+        }
+
         .gold-btn {
             background: rgba(197, 160, 89, 0.1);
             border: 1px solid var(--ancient-gold);
@@ -422,9 +451,6 @@
             </div>
             <div class="flex gap-2">
                 <button type="button" onclick="shareSiteFeed()" class="gold-btn text-[10px] tracking-widest px-4 py-2" title="사이트를 카카오톡으로 공유">📤 사이트 공유</button>
-                <button onclick="getAiRecommendation()" class="gold-btn text-[10px] tracking-widest px-4 py-2">
-                    🔮 운명의 계시
-                </button>
             </div>
         </div>
 
@@ -487,7 +513,7 @@
                 </div>
                 <div class="mt-4 flex justify-end gap-2 flex-wrap">
                     <button type="button" id="share-qa-btn" onclick="queueShareQuestionAnswerFeed()" class="gold-btn text-[10px] px-4 py-2" title="질문과 답변을 이미지로 카카오톡 공유">📜 이미지로 공유</button>
-                    <button type="button" id="share-qa-link-btn" onclick="setTimeout(shareQuestionAnswerAsLink,0)" class="gold-btn text-[10px] px-4 py-2" title="질문과 답변 링크를 카카오톡 공유">🔗 링크로 공유</button>
+                    <button type="button" id="share-qa-link-btn" onclick="setTimeout(shareQuestionAnswerAsLink, 0)" class="gold-btn text-[10px] px-4 py-2" title="질문과 답변 링크를 카카오톡 공유">🔗 링크로 공유</button>
                 </div>
                 <div class="mt-4 pt-4 border-t border-[#36241a]/5 flex justify-between items-center text-[9px] text-[#36241a]/40 font-bold tracking-[0.2em] uppercase">
                     <span>Fragment #ARC-9</span>
@@ -524,15 +550,6 @@
 
             <div id="tmdb-search-status" class="mb-4 text-stone-400 text-sm min-h-[1.5rem]"></div>
             <div id="tmdb-search-results" class="scrollbar-hide" style="max-height: 60vh; overflow-y: auto;"></div>
-        </div>
-    </div>
-
-    <!-- 운명의 계시 팝업 -->
-    <div id="recommendation-overlay" class="modal-blur" onclick="closeRecommendation()">
-        <div class="ancient-slab" onclick="event.stopPropagation()">
-            <div class="inline-block px-8 py-1 rounded-sm border border-yellow-800 text-yellow-600 text-[9px] mb-8 font-bold tracking-[0.4em] uppercase">Grand Revelation 🔮</div>
-            <p id="recommendation-text" class="text-xl font-bold leading-relaxed text-stone-100 italic" style="font-family: 'serif';"></p>
-            <button onclick="closeRecommendation()" class="gold-btn px-10 py-3 mt-10 text-xs tracking-widest">확인</button>
         </div>
     </div>
 
@@ -772,19 +789,6 @@
             createBgStacks();
             initLibrary();
         };
-
-        async function fetchGemini(prompt, systemInstruction = "") {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-            const payload = {
-                contents: [{ parts: [{ text: prompt }] }],
-                systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined
-            };
-            try {
-                const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                const res = await response.json();
-                return res.candidates?.[0]?.content?.parts?.[0]?.text || "마력이 소진되었습니다.";
-            } catch (error) { return "결계가 불안정합니다."; }
-        }
 
         function openGrimoire(title) {
             currentOpenAnime = title;
@@ -1133,21 +1137,6 @@
             const count = document.querySelectorAll('.grimoire:not(.grimoire-add)').length;
             document.getElementById('book-count').innerText = `Volumes: ${count}`;
         }
-
-        async function getAiRecommendation() {
-            const overlay = document.getElementById('recommendation-overlay');
-            const textField = document.getElementById('recommendation-text');
-            overlay.style.display = 'flex';
-            textField.innerText = "수정구슬을 들여다보는 중이다...";
-            const books = Object.keys(archiveData).join(', ');
-            if (!books) {
-                textField.innerText = "아직 기록된 작품이 없습니다. 먼저 작품을 추가해주세요.";
-                return;
-            }
-            const res = await fetchGemini(`사용자의 취향: [${books}]. 제리에답게 딱 하나의 애니메이션이나 영화를 오만하게 추천해줘.`, "당신은 제리에입니다.");
-            textField.innerText = res.trim();
-        }
-        function closeRecommendation() { document.getElementById('recommendation-overlay').style.display = 'none'; }
 
         // ========== 카카오톡 공유 (.env의 KAKAO_JS_KEY 사용) ==========
         let kakaoJsKey = "";
