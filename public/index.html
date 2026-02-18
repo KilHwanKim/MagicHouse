@@ -461,6 +461,52 @@
 
         .scrollbar-hide::-webkit-scrollbar { display: none; }
 
+        /* 새 질문 연성 로딩 오버레이 */
+        #conjure-loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 2000;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(12px);
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 20px;
+        }
+        #conjure-loading-overlay.visible {
+            display: flex;
+        }
+        .conjure-loading-text {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: var(--ancient-gold);
+            letter-spacing: 0.15em;
+            text-shadow: 0 0 20px rgba(197, 160, 89, 0.5);
+            animation: conjurePulse 1.5s ease-in-out infinite;
+        }
+        .conjure-loading-dots {
+            display: flex;
+            gap: 6px;
+        }
+        .conjure-loading-dots span {
+            width: 8px;
+            height: 8px;
+            background: var(--ancient-gold);
+            border-radius: 50%;
+            animation: conjureBounce 0.6s ease-in-out infinite;
+        }
+        .conjure-loading-dots span:nth-child(2) { animation-delay: 0.1s; }
+        .conjure-loading-dots span:nth-child(3) { animation-delay: 0.2s; }
+        @keyframes conjurePulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        @keyframes conjureBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
         /* 공유용 카드 (html2canvas 캡처 대상) - 화면 안에서 렌더링해야 전체 캡처됨 */
         .share-card-wrapper {
             position: fixed;
@@ -544,13 +590,13 @@
                         </button>
                     </div>
                 </div>
-                <div class="mt-8 flex items-center justify-between">
-                    <div class="flex gap-2 flex-wrap items-center">
-                        <div class="flex gap-2">
-                            <button onclick="prevQuestion()" class="p-2 border border-[#36241a]/20 hover:bg-[#36241a]/5 rounded">◀</button>
-                            <span id="q-index" class="text-[10px] font-bold text-[#36241a]/50 flex items-center px-1">1 / 1</span>
-                            <button onclick="nextQuestion()" class="p-2 border border-[#36241a]/20 hover:bg-[#36241a]/5 rounded">▶</button>
-                        </div>
+                <div class="mt-8 flex items-center justify-between gap-2 flex-wrap">
+                    <div class="flex gap-2">
+                        <button onclick="prevQuestion()" class="p-2 border border-[#36241a]/20 hover:bg-[#36241a]/5 rounded">◀</button>
+                        <span id="q-index" class="text-[10px] font-bold text-[#36241a]/50 flex items-center px-1">1 / 1</span>
+                        <button onclick="nextQuestion()" class="p-2 border border-[#36241a]/20 hover:bg-[#36241a]/5 rounded">▶</button>
+                    </div>
+                    <div class="flex gap-2 ml-auto">
                         <button onclick="addCustomQuestion()" class="gold-btn text-[10px] px-3 py-2">✍️ 질문 직접 연성</button>
                         <button onclick="conjureNewQuestion()" class="gold-btn text-[10px] px-3 py-2">✨ 새 질문 연성</button>
                     </div>
@@ -607,6 +653,14 @@
 
             <div id="tmdb-search-status" class="mb-4 text-stone-400 text-sm min-h-[1.5rem]"></div>
             <div id="tmdb-search-results" class="scrollbar-hide" style="max-height: 60vh; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <!-- 새 질문 연성 로딩 오버레이 -->
+    <div id="conjure-loading-overlay">
+        <div class="conjure-loading-text">마법으로 질문 생성하는 중</div>
+        <div class="conjure-loading-dots">
+            <span></span><span></span><span></span>
         </div>
     </div>
 
@@ -1007,6 +1061,9 @@
             const originalText = btn.innerText;
             btn.innerText = "연성 중...";
             
+            const overlay = document.getElementById("conjure-loading-overlay");
+            if (overlay) overlay.classList.add("visible");
+            
             try {
                 // overview 가져오기 (없으면 작품 제목 기반 기본 설명 사용)
                 let overview = getOverviewForTitle(currentOpenAnime);
@@ -1089,6 +1146,7 @@
                 console.error("질문 생성 오류:", error);
                 alert("질문 생성 중 오류가 발생했습니다: " + error.message);
             } finally {
+                if (overlay) overlay.classList.remove("visible");
                 btn.disabled = false;
                 btn.innerText = originalText;
             }
