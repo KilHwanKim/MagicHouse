@@ -3,8 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Google AdSense 사이트 소유 확인: AdSense 콘솔에서 사이트 추가 시 받은 meta 태그로 교체하세요. -->
-    <meta name="google-site-verification" content="여기에_AdSense에서_받은_확인코드_입력" />
     <title>Arcane Archive - 전설의 대도서관</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -31,7 +29,7 @@
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             z-index: -1;
-            opacity: 0.7;
+            opacity: 0.5;
             display: flex;
             justify-content: space-around;
             align-items: flex-end;
@@ -43,34 +41,24 @@
             width: 130px;
             display: flex;
             flex-direction: column-reverse;
-            margin: 0 -15px; 
-            transition: all 0.5s;
+            margin: 0 -20px; 
         }
 
         .bg-book {
-            height: 14px;
+            height: 12px;
             margin-bottom: 2px;
             background: #1e1e24;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            border-left: 8px solid rgba(0,0,0,0.6); 
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            border-left: 8px solid rgba(0,0,0,0.5); 
             width: 100%;
             border-radius: 1px;
-            position: relative;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
 
-        .bg-book::after {
-            content: '';
-            position: absolute;
-            right: 0; top: 0; bottom: 0; width: 80%;
-            background: linear-gradient(90deg, transparent, rgba(197, 160, 89, 0.08));
-        }
-
-        /* 2. 고대 도서관 채광 효과 */
+        /* 2. 고대 도서관 채광 및 마법 효과 */
         .god-rays {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at 50% -5%, rgba(197, 160, 89, 0.35) 0%, transparent 85%);
+            background: radial-gradient(circle at 50% -5%, rgba(197, 160, 89, 0.25) 0%, transparent 85%);
             pointer-events: none;
             z-index: 1;
         }
@@ -81,7 +69,7 @@
             pointer-events: none;
             background-image: radial-gradient(circle, #fff 1px, transparent 1px);
             background-size: 100px 100px;
-            opacity: 0.12;
+            opacity: 0.1;
             animation: moveDust 45s linear infinite;
             z-index: 0;
         }
@@ -91,42 +79,63 @@
             to { background-position: 1000px 1000px; }
         }
 
-        /* 3. 질문 카드 */
-        .ancient-slab {
-            animation: float 6s ease-in-out infinite;
-            background: rgba(20, 20, 28, 0.9);
-            backdrop-filter: blur(15px);
-            border: 2px solid rgba(197, 160, 89, 0.5);
-            box-shadow: 0 40px 100px rgba(0,0,0,0.9), 0 0 20px rgba(197, 160, 89, 0.15);
-            border-radius: 4px;
+        /* 3. 3단 선반 레이아웃 */
+        .shelf-container {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            margin-bottom: 80px;
         }
 
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotateX(1deg); }
-            50% { transform: translateY(-12px) rotateX(0deg); }
+        .shelf-row {
+            position: relative;
+            padding: 0 20px;
         }
 
-        /* 4. 마도서(Grimoire) 디자인 개선 - 흘림체 폰트 적용 */
+        .books-wrapper {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 6px;
+            min-height: 240px;
+            padding-bottom: 2px;
+            flex-wrap: nowrap;
+            overflow-x: visible;
+        }
+
+        .stone-stair {
+            height: 28px;
+            background: linear-gradient(to bottom, #32323a, #08080a);
+            border-radius: 2px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            width: 100%;
+            border-top: 1px solid rgba(197, 160, 89, 0.2);
+        }
+
+        /* 4. 마도서(Grimoire) 디자인 */
         .grimoire {
-            width: 68px;
-            height: 210px;
+            /* 너비는 JS에서 동적으로 설정 */
+            height: 190px;
             position: relative;
             cursor: pointer;
             transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
             transform-style: preserve-3d;
-            border-radius: 4px 8px 8px 4px;
+            border-radius: 3px 6px 6px 3px;
             display: flex;
             align-items: center;
             justify-content: center;
-            writing-mode: vertical-rl;
-            /* 흘림체 폰트 적용 */
+            writing-mode: vertical-lr;
+            text-orientation: upright;
+            direction: ltr;
             font-family: 'Nanum Brush Script', cursive;
-            font-weight: normal;
-            font-size: 1.4rem;
+            font-size: 1.2rem;
             color: rgba(255,255,255,0.9);
-            box-shadow: -15px 15px 40px rgba(0,0,0,0.85);
-            border-left: 8px solid rgba(0,0,0,0.4);
-            letter-spacing: -1px;
+            box-shadow: -10px 10px 25px rgba(0,0,0,0.7);
+            border-left: 6px solid rgba(0,0,0,0.3);
+            flex-shrink: 0;
+            text-align: center;
+            word-break: keep-all;
+            line-height: 1.4;
         }
 
         .grimoire::before {
@@ -134,345 +143,976 @@
             position: absolute;
             left: 0; right: 0; top: 0; bottom: 0;
             background: linear-gradient(to bottom, 
-                transparent 15%, rgba(0,0,0,0.4) 15.5%, rgba(0,0,0,0.4) 17%, transparent 17.5%,
+                transparent 15%, rgba(0,0,0,0.3) 15.5%, rgba(0,0,0,0.3) 17%, transparent 17.5%,
                 transparent 45%, rgba(0,0,0,0.4) 45.5%, rgba(0,0,0,0.4) 47%, transparent 47.5%,
                 transparent 80%, rgba(0,0,0,0.4) 80.5%, rgba(0,0,0,0.4) 82%, transparent 82.5%
             );
-            pointer-events: none;
         }
 
         .grimoire-decoration {
             position: absolute;
-            top: 12px; bottom: 12px; left: 12px; right: 12px;
-            border: 1px solid rgba(197, 160, 89, 0.4);
+            top: 10px; bottom: 10px; left: 10px; right: 10px;
+            border: 1px solid rgba(197, 160, 89, 0.3);
             pointer-events: none;
         }
 
         .grimoire:hover {
-            transform: translateY(-45px) rotateY(-20deg) scale(1.15);
-            filter: brightness(1.25) contrast(1.1);
-            box-shadow: 35px 35px 70px rgba(0,0,0,0.9);
+            transform: translateY(-30px) rotateY(-15deg) scale(1.1);
+            filter: brightness(1.2);
+            box-shadow: 20px 20px 40px rgba(0,0,0,0.9);
             z-index: 50;
         }
 
-        /* 선반 */
-        .stone-stair {
-            height: 35px;
-            background: linear-gradient(to bottom, #32323a, #08080a);
-            border-radius: 2px;
-            box-shadow: 0 30px 60px rgba(0,0,0,1);
-            position: relative;
-            z-index: 10;
-            border-top: 1px solid rgba(197, 160, 89, 0.3);
-        }
-
-        /* 버튼 */
-        .gold-btn {
-            transition: all 0.4s;
-            background: rgba(197, 160, 89, 0.15);
-            border: 2px solid var(--ancient-gold);
+        .grimoire-add {
+            width: 60px;
+            background: rgba(197, 160, 89, 0.05);
+            border: 2px dashed rgba(197, 160, 89, 0.2);
             color: var(--ancient-gold);
-            text-shadow: 0 0 15px rgba(197, 160, 89, 0.7);
-            letter-spacing: 0.2em;
-            font-weight: 700;
+            font-family: 'serif';
+            font-size: 1.8rem;
+            writing-mode: horizontal-tb;
+            box-shadow: none;
         }
 
-        .gold-btn:hover {
+        /* 책 추가 애니메이션 */
+        .book-appear {
+            animation: bookAppear 0.5s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+        }
+
+        @keyframes bookAppear {
+            0% {
+                opacity: 0;
+                transform: scale(0.8) translateY(20px);
+                filter: brightness(1.5);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+                filter: brightness(1);
+            }
+        }
+
+        /* 5. 3D 북 모달 */
+        .book-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            backdrop-filter: blur(25px);
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            perspective: 2000px;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .open-book {
+            width: 100%;
+            max-width: 900px;
+            height: 80vh;
+            max-height: 600px;
+            display: flex;
+            position: relative;
+            transform-style: preserve-3d;
+            animation: bookUnfold 0.8s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+            background-image: url('https://www.transparenttextures.com/patterns/parchment.png');
+        }
+
+        @keyframes bookUnfold {
+            0% { transform: scale(0.8) rotateY(-45deg); opacity: 0; }
+            100% { transform: scale(1) rotateY(0deg); opacity: 1; }
+        }
+
+        .book-page {
+            flex: 1;
+            background: #e8dec9;
+            color: #2d241e;
+            padding: 25px;
+            position: relative;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.1);
+            overflow-y: auto;
+        }
+
+        .page-left {
+            border-radius: 10px 0 0 10px;
+            border-right: 1px solid rgba(0,0,0,0.1);
+            background-image: linear-gradient(to right, #d4c4a8, #e8dec9 15%);
+        }
+
+        .page-right {
+            border-radius: 0 10px 10px 0;
+            background-image: linear-gradient(to left, #d4c4a8, #e8dec9 15%);
+        }
+
+        .book-binding {
+            position: absolute;
+            left: 50%; top: 0; bottom: 0;
+            width: 30px;
+            background: linear-gradient(to right, rgba(0,0,0,0.2), rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.2));
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+
+        /* 6. 모바일 대응 */
+        @media (max-width: 768px) {
+            .open-book {
+                flex-direction: column;
+                height: 90vh;
+                max-height: none;
+            }
+            .book-binding {
+                width: 100%;
+                height: 20px;
+                left: 0; top: 50%;
+                transform: translateY(-50%);
+                background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.02) 50%, rgba(0,0,0,0.1));
+            }
+            .page-left { border-radius: 10px 10px 0 0; border-right: none; border-bottom: 1px solid rgba(0,0,0,0.1); }
+            .page-right { border-radius: 0 0 10px 10px; }
+            .grimoire { height: 160px; font-size: 1rem; }
+            .books-wrapper { gap: 5px; }
+        }
+
+        .gold-btn {
+            background: rgba(197, 160, 89, 0.1);
+            border: 1px solid var(--ancient-gold);
+            color: var(--ancient-gold);
+            padding: 8px 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+
+        .gold-btn:hover:not(:disabled) {
             background: var(--ancient-gold);
-            color: #050507;
-            box-shadow: 0 0 50px var(--ancient-gold);
-            transform: translateY(-4px);
+            color: #000;
+            box-shadow: 0 0 20px var(--ancient-gold);
         }
 
-        /* 모달 및 기타 */
+        .gold-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .mana-input {
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(54, 36, 26, 0.2);
+            border-radius: 4px;
+            color: #2d241e;
+            padding: 10px;
+            width: 100%;
+            font-family: 'serif';
+            resize: none;
+            outline: none;
+        }
+
+        .mana-input:disabled {
+            background: rgba(0, 0, 0, 0.02);
+            color: rgba(45, 36, 30, 0.4);
+            cursor: not-allowed;
+        }
+
+        /* 작품 추가 모달 */
         .modal-blur {
             display: none;
-            backdrop-filter: blur(25px);
-            background: rgba(0,0,0,0.85);
-            transition: opacity 0.4s;
-            z-index: 100;
-        }
-
-        .book-open-anim {
-            animation: bookOpen 0.8s cubic-bezier(0.19, 1, 0.22, 1) forwards;
-        }
-
-        @keyframes bookOpen {
-            from { transform: scale(0.9) translateY(40px); opacity: 0; }
-            to { transform: scale(1) translateY(0); opacity: 1; }
-        }
-
-        .notification-toast {
             position: fixed;
-            bottom: 3rem;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--ancient-gold);
-            color: #050507;
-            padding: 1.2rem 3rem;
-            border-radius: 2px;
-            font-weight: bold;
-            box-shadow: 0 0 50px rgba(197, 160, 89, 0.5);
-            z-index: 200;
-            display: none;
-            letter-spacing: 4px;
-            text-transform: uppercase;
+            top: 0; left: 0; width: 100%; height: 100%;
+            backdrop-filter: blur(20px);
+            background: rgba(0,0,0,0.85);
+            z-index: 1100;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .ancient-slab {
+            background: rgba(20, 20, 28, 0.95);
+            border: 1px solid var(--ancient-gold);
+            box-shadow: 0 30px 60px rgba(0,0,0,1);
+            padding: 40px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        /* TMDB 검색 결과 스타일 */
+        .search-result-item {
+            display: flex;
+            gap: 16px;
+            padding: 16px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(197, 160, 89, 0.2);
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .search-result-item:hover {
+            background: rgba(197, 160, 89, 0.1);
+            border-color: var(--ancient-gold);
+            transform: translateX(4px);
+        }
+
+        .search-result-poster {
+            width: 96px;
+            height: 144px;
+            object-fit: cover;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .search-result-poster-placeholder {
+            width: 96px;
+            height: 144px;
+            background: rgba(197, 160, 89, 0.1);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(197, 160, 89, 0.4);
+            font-size: 12px;
+            flex-shrink: 0;
         }
 
         .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="p-4 md:p-10 pt-20"> <!-- 타이틀이 없어졌으므로 상단 여백 추가 -->
-    <!-- 배경 장식들 -->
+<body class="p-4 md:p-10 pt-10">
     <div class="library-bg" id="bg-stacks"></div>
     <div class="god-rays"></div>
     <div class="magic-dust"></div>
-    <div id="toast" class="notification-toast"></div>
 
-    <!-- 중앙 질문 구역 -->
-    <main class="max-w-4xl mx-auto relative z-10">
-        <section class="ancient-slab p-16 mb-24 text-center">
-            <div class="inline-block px-8 py-1 rounded-sm border border-yellow-800 text-yellow-600 text-[12px] mb-12 font-bold tracking-[0.5em] uppercase">
-                Grand Mandate ⚖️
+    <main class="max-w-6xl mx-auto relative z-10">
+        <!-- 상단 정보 헤더 -->
+        <div class="flex flex-wrap items-center justify-between gap-6 mb-12 px-4">
+            <div class="flex items-center gap-6">
+                <span class="text-4xl opacity-50">📜</span>
+                <h3 class="text-xl md:text-2xl font-bold tracking-[0.2em] text-stone-400 uppercase">The Eternal Records</h3>
+                <span id="book-count" class="text-[10px] bg-stone-900 text-stone-500 px-3 py-1 border border-stone-800 font-bold uppercase tracking-widest">Volumes: 0</span>
             </div>
-            <h2 id="current-question-display" class="text-3xl md:text-5xl font-bold mb-16 leading-relaxed text-stone-100" style="font-family: 'serif'; text-shadow: 0 0 40px rgba(0,0,0,0.9);">
-                "장송의 프리렌에서 당신이 <br class="hidden md:block">가장 좋아하는 마법은 무엇인가요?"
-            </h2>
-            
-            <div class="flex flex-col md:flex-row gap-8 justify-center">
-                <button id="gen-question-btn" onclick="generateAiQuestion()" class="gold-btn px-14 py-6 font-bold flex items-center justify-center gap-4">
-                    <span id="btn-text">✨ AI 마력 연성</span>
-                </button>
-                <button onclick="openWriteModal()" class="px-14 py-6 bg-stone-900/95 hover:bg-stone-800 text-stone-400 font-bold transition-all border border-stone-700 flex items-center justify-center gap-2 tracking-[0.3em]">
-                    <span>📝 기록 봉인</span>
-                </button>
-            </div>
-        </section>
+            <button onclick="getAiRecommendation()" class="gold-btn text-[10px] tracking-widest px-4 py-2">
+                🔮 운명의 계시
+            </button>
+        </div>
 
-        <!-- 아카이브 섹션 -->
-        <section>
-            <div class="flex flex-wrap items-center justify-between gap-6 mb-14 px-8">
-                <div class="flex items-center gap-6">
-                    <span class="text-4xl opacity-50">📜</span>
-                    <h3 class="text-2xl font-bold tracking-[0.3em] text-stone-400 uppercase">The Eternal Records</h3>
-                    <span id="book-count" class="text-[12px] bg-stone-900 text-stone-500 px-5 py-1 border border-stone-800 font-bold">VOLUMES: 6</span>
+        <!-- 3단 서재 선반 구역 -->
+        <div class="shelf-container">
+            <div class="shelf-row">
+                <div id="shelf-1" class="books-wrapper">
+                    <div class="grimoire grimoire-add" onclick="openTmdbSearchModal()" title="새로운 마법 기록 연성">+</div>
                 </div>
-                <button onclick="getAiRecommendation()" class="text-[12px] text-yellow-800 hover:text-yellow-600 font-bold border-b border-yellow-900/50 pb-1 tracking-[0.3em] uppercase">
-                    🔮 운명의 계시
-                </button>
+                <div class="stone-stair"></div>
             </div>
-
-            <div class="relative group mb-48">
-                <div id="bookshelf" class="flex items-end justify-start gap-4 px-14 pb-1 overflow-x-auto min-h-[320px] scrollbar-hide">
-                    <div class="grimoire bg-[#4e1a1a]" onclick="openGrimoire('장송의 프리렌', '가장 봉인해두고 싶은 기억은?', '힘멜과의 10년, 그 짧지만 영원한 시간의 조각들.')">
-                        <div class="grimoire-decoration"></div>
-                        프리렌
-                    </div>
-                    <div class="grimoire bg-[#1a2b4a] h-[240px]" onclick="openGrimoire('귀멸의 칼날', '가장 눈물 흘렸던 죽음은?', '렌고쿠 쿄쥬로의 마지막 미소.')">
-                        <div class="grimoire-decoration"></div>
-                        귀멸의칼날
-                    </div>
-                    <div class="grimoire bg-[#1b3b2a] h-[210px]" onclick="openGrimoire('주술회전', '가장 가지고 싶은 영역 전개는?', '무량공처.')">
-                        <div class="grimoire-decoration"></div>
-                        주술회전
-                    </div>
-                    <div class="grimoire bg-[#5d4037] h-[260px]" onclick="openGrimoire('하이큐!!', '내 삶을 바꾼 한 문장은?', '무슨 일이 있어도 공은 반드시 올라온다.')">
-                        <div class="grimoire-decoration"></div>
-                        하이큐!!
-                    </div>
-                    <div class="grimoire bg-[#281b3d] h-[230px]" onclick="openGrimoire('최애의 아이', '작품 속 가장 충격적인 마법은?', '거짓말은 가장 지독하고 아름다운 마법이다.')">
-                        <div class="grimoire-decoration"></div>
-                        최애의아이
-                    </div>
-                    <div class="grimoire bg-[#1c1c1c] h-[220px]" onclick="openGrimoire('스파이패밀리', '아냐가 당신의 마음을 읽는다면?', '내 덕후 같은 마음을 들키고 당황해하는 아냐.')">
-                        <div class="grimoire-decoration"></div>
-                        스파이패밀리
-                    </div>
-                </div>
-                <div class="stone-stair w-full"></div>
+            <div class="shelf-row">
+                <div id="shelf-2" class="books-wrapper"></div>
+                <div class="stone-stair"></div>
             </div>
-        </section>
+            <div class="shelf-row">
+                <div id="shelf-3" class="books-wrapper"></div>
+                <div class="stone-stair"></div>
+            </div>
+        </div>
     </main>
 
-    <!-- 모달 상세 -->
-    <div id="modalOverlay" class="modal-blur fixed inset-0 flex items-center justify-center p-4" onclick="closeGrimoire()">
-        <div id="grimoireContent" class="bg-[#e8dec9] text-[#2d241e] w-full max-w-2xl p-16 rounded-sm shadow-[0_0_150px_rgba(0,0,0,1)] relative book-open-anim border-l-[40px] border-[#36241a]" onclick="event.stopPropagation()" style="background-image: url('https://www.transparenttextures.com/patterns/parchment.png');">
-            <div class="absolute top-8 right-10 text-4xl cursor-pointer opacity-30 hover:opacity-100 transition-opacity" onclick="closeGrimoire()">×</div>
-            <h3 id="m-title" class="text-4xl font-bold mb-12 font-serif text-[#36241a] border-b-2 border-[#36241a]/15 pb-8 tracking-tighter"></h3>
-            <div class="space-y-16">
-                <div>
-                    <span class="text-[12px] uppercase tracking-[0.5em] text-[#36241a]/50 font-bold block mb-6">Imperial Inquiry</span>
-                    <div class="text-2xl font-bold border-l-4 border-[#c5a059]/50 pl-8 py-3 italic text-[#4e342e]">
-                        <span id="m-question"></span>
+    <!-- 마도서 펼치기 모달 -->
+    <div id="book-modal" class="book-overlay" onclick="closeGrimoire()">
+        <div class="open-book" onclick="event.stopPropagation()">
+            <div class="book-binding"></div>
+            <div class="book-page page-left flex flex-col">
+                <h3 id="book-title" class="text-2xl md:text-3xl font-bold mb-6 font-serif text-[#36241a] border-b border-[#36241a]/10 pb-4">작품명</h3>
+                <div class="flex-1 flex flex-col justify-center">
+                    <div class="text-[10px] uppercase tracking-[0.2em] text-[#36241a]/40 font-bold mb-4 italic">The Sealed Question</div>
+                    <div class="relative group">
+                        <div id="q-text" class="text-lg font-bold border-l-4 border-[#c5a059]/50 pl-6 py-2 italic text-[#4a342e] pr-12">질문이 표시됩니다.</div>
+                        <button 
+                            onclick="deleteCurrentQuestion()" 
+                            class="absolute top-2 right-2 opacity-70 hover:opacity-100 transition-opacity text-[#36241a]/60 hover:text-red-600 text-xl font-bold p-1 rounded hover:bg-red-50"
+                            title="질문 삭제"
+                        >
+                            ×
+                        </button>
                     </div>
                 </div>
-                <div>
-                    <span class="text-[12px] uppercase tracking-[0.5em] text-[#36241a]/50 font-bold block mb-6">Arcane Testimony</span>
-                    <div class="text-2xl leading-relaxed font-serif pl-8 text-[#2d241e]">
-                        <span id="m-body"></span>
+                <div class="mt-8 flex items-center justify-between">
+                    <div class="flex gap-2">
+                        <button onclick="prevQuestion()" class="p-2 border border-[#36241a]/20 hover:bg-[#36241a]/5 rounded">◀</button>
+                        <span id="q-index" class="text-[10px] font-bold text-[#36241a]/50 flex items-center px-1">1 / 1</span>
+                        <button onclick="nextQuestion()" class="p-2 border border-[#36241a]/20 hover:bg-[#36241a]/5 rounded">▶</button>
                     </div>
+                    <button onclick="conjureNewQuestion()" class="gold-btn text-[10px] px-3 py-2">✨ 새 사유 연성</button>
                 </div>
             </div>
-            <div class="mt-24 pt-10 border-t border-[#36241a]/5 flex justify-between items-center text-[11px] text-[#36241a]/40 font-bold tracking-[0.4em]">
-                <span>MANUSCRIPT REF: XA-773</span>
-                <span id="m-date">FEBRUARY 13, 2026</span>
+            <div class="book-page page-right flex flex-col">
+                <div class="absolute top-4 right-6 text-3xl cursor-pointer opacity-30 hover:opacity-100" onclick="closeGrimoire()">×</div>
+                <div class="flex-1 flex flex-col mt-8">
+                    <div class="text-[10px] uppercase tracking-[0.2em] text-[#36241a]/40 font-bold mb-4 italic">My Arcane Record</div>
+                    <textarea id="a-input" class="mana-input flex-1" placeholder="당신의 통찰을 이곳에 봉인하십시오..."></textarea>
+                </div>
+                <div class="mt-6 flex justify-end gap-3 items-center">
+                    <button id="save-answer-btn" onclick="saveCurrentAnswer(); saveToLocalStorage();" class="gold-btn text-[10px] px-6 py-2">봉인 완료</button>
+                </div>
+                <div class="mt-4 pt-4 border-t border-[#36241a]/5 flex justify-between items-center text-[9px] text-[#36241a]/40 font-bold tracking-[0.2em] uppercase">
+                    <span>Fragment #ARC-9</span>
+                    <span id="m-date">FEB 15, 2026</span>
+                </div>
             </div>
         </div>
     </div>
 
-    <div id="writeModal" class="modal-blur fixed inset-0 flex items-center justify-center p-4" onclick="closeWriteModal()">
-        <div class="bg-[#0f0f12] border-2 border-yellow-900/40 w-full max-w-xl p-14 rounded-sm shadow-2xl relative" onclick="event.stopPropagation()">
-            <h3 class="text-3xl font-bold text-yellow-700 mb-6 tracking-[0.3em] uppercase">Commit to Eternity</h3>
-            <p id="write-q-display" class="text-stone-400 text-lg mb-14 italic border-l-4 border-yellow-900/30 pl-8"></p>
-            <div class="mb-12">
-                <label class="block text-[12px] font-bold text-stone-600 mb-4 uppercase tracking-[0.4em]">Codex Title</label>
-                <input id="input-title" type="text" placeholder="마법의 이름을 새기십시오..." class="w-full bg-black/80 border border-stone-800 rounded-none px-6 py-6 focus:outline-none focus:border-yellow-900/50 text-stone-200 placeholder-stone-800">
+    <!-- TMDB 검색 모달 -->
+    <div id="tmdb-search-modal" class="modal-blur" onclick="closeTmdbSearchModal()">
+        <div class="ancient-slab" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold text-yellow-600 tracking-widest uppercase">Seal New Record</h3>
+                <button onclick="closeTmdbSearchModal()" class="text-2xl text-stone-600 hover:text-stone-400 cursor-pointer">×</button>
             </div>
-            <div class="mb-14 relative">
-                <label class="block text-[12px] font-bold text-stone-600 mb-4 uppercase tracking-[0.4em]">Divine Insight</label>
-                <textarea id="input-answer" rows="6" placeholder="당신의 사유를 봉인하십시오..." class="w-full bg-black/80 border border-stone-800 rounded-none px-6 py-6 focus:outline-none focus:border-yellow-900/50 text-stone-200 placeholder-stone-800"></textarea>
-                <button onclick="refineWithAi()" class="absolute bottom-6 right-6 text-[11px] bg-yellow-900/20 hover:bg-yellow-900/50 text-yellow-600 border border-yellow-900/40 px-6 py-2 transition-all">
-                    <span id="refine-text">✨ AI 문장 연성</span>
+            
+            <div class="flex gap-2 mb-6">
+                <input
+                    type="text"
+                    id="tmdb-search-input"
+                    placeholder="작품명 검색 (예: 프리렌, 귀멸)"
+                    class="flex-1 rounded-lg bg-black/40 border border-stone-800 px-4 py-3 focus:outline-none focus:border-yellow-900/50 text-stone-200 placeholder-stone-600"
+                    autocomplete="off"
+                />
+                <button
+                    id="tmdb-search-btn"
+                    onclick="doTmdbSearch()"
+                    class="gold-btn px-6 py-3 text-xs tracking-widest"
+                >
+                    검색
                 </button>
             </div>
-            <div class="flex gap-8">
-                <button onclick="saveRecord()" class="flex-1 bg-yellow-900/30 hover:bg-yellow-900/60 text-yellow-600 font-bold py-6 tracking-[0.5em] transition-all uppercase text-sm border border-yellow-900/50">
-                    봉인 완료
-                </button>
-                <button onclick="closeWriteModal()" class="px-12 py-6 bg-stone-900 text-stone-700 font-bold uppercase text-[12px] tracking-widest">취소</button>
-            </div>
+
+            <div id="tmdb-search-status" class="mb-4 text-stone-400 text-sm min-h-[1.5rem]"></div>
+            <div id="tmdb-search-results" class="scrollbar-hide" style="max-height: 60vh; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <!-- 운명의 계시 팝업 -->
+    <div id="recommendation-overlay" class="modal-blur" onclick="closeRecommendation()">
+        <div class="ancient-slab" onclick="event.stopPropagation()">
+            <div class="inline-block px-8 py-1 rounded-sm border border-yellow-800 text-yellow-600 text-[9px] mb-8 font-bold tracking-[0.4em] uppercase">Grand Revelation 🔮</div>
+            <p id="recommendation-text" class="text-xl font-bold leading-relaxed text-stone-100 italic" style="font-family: 'serif';"></p>
+            <button onclick="closeRecommendation()" class="gold-btn px-10 py-3 mt-10 text-xs tracking-widest">확인</button>
         </div>
     </div>
 
     <script>
         const apiKey = "";
-        let currentQuestion = "장송의 프리렌에서 당신이 가장 봉인해두고 싶은 기억은 무엇인가요?";
+        const API_BASE = window.location.origin;
+        const IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
+        
+        const STORAGE_KEY = "arcane_archive";
+        
+        // 초기 데이터 (빈 상태로 시작)
+        let archiveData = {}; // { title: [{ q, a }, ...] }
+        let workMetadata = {}; // { title: { overview: "" } } - 작품 메타데이터
+        
+        let currentOpenAnime = "";
+
+        function loadFromLocalStorage() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    const data = JSON.parse(raw);
+                    if (data && typeof data.archiveData === "object") {
+                        archiveData = data.archiveData || {};
+                    }
+                    if (data && typeof data.workMetadata === "object") {
+                        workMetadata = data.workMetadata || {};
+                    }
+                }
+            } catch (e) {
+                console.warn("로컬 스토리지 로드 실패:", e);
+            }
+        }
+
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                    archiveData,
+                    workMetadata
+                }));
+            } catch (e) {
+                console.warn("로컬 스토리지 저장 실패:", e);
+            }
+        }
+        let currentQIndex = 0;
+        let currentSearchResults = [];
 
         function createBgStacks() {
             const container = document.getElementById('bg-stacks');
-            container.innerHTML = '';
+            if(!container) return;
             const stackCount = 14; 
             for(let i = 0; i < stackCount; i++) {
                 const stack = document.createElement('div');
                 stack.className = 'book-stack';
-                const height = Math.floor(Math.random() * 35) + 25; 
+                const height = Math.floor(Math.random() * 30) + 15; 
                 for(let j = 0; j < height; j++) {
                     const book = document.createElement('div');
                     book.className = 'bg-book';
                     book.style.width = (75 + Math.random() * 45) + '%';
-                    const hue = 200 + Math.random() * 45;
-                    book.style.backgroundColor = `hsl(${hue}, 18%, ${15 + Math.random() * 20}%)`;
-                    book.style.transform = `rotate(${(Math.random() - 0.5) * 1.5}deg)`;
+                    const hue = 210 + Math.random() * 40;
+                    book.style.backgroundColor = `hsl(${hue}, 15%, ${12 + Math.random() * 15}%)`;
                     stack.appendChild(book);
                 }
                 container.appendChild(stack);
             }
         }
+
+        // 초기 서재 채우기 (왼쪽 위부터 순서대로)
+        function initLibrary() {
+            const titles = Object.keys(archiveData);
+            titles.forEach((title) => {
+                addBookToNextAvailableShelf(title);
+            });
+            updateVolumeCount();
+        }
+
+        // archiveData 구조 호환성 함수: 기존 배열 형태를 새로운 구조로 변환
+        function getQuestionsForTitle(title) {
+            if (!archiveData[title]) return [];
+            // 기존 배열 형태인지 확인
+            if (Array.isArray(archiveData[title])) {
+                return archiveData[title];
+            }
+            // 새로운 구조인 경우
+            return archiveData[title].questions || [];
+        }
+
+        function getOverviewForTitle(title) {
+            return workMetadata[title]?.overview || "";
+        }
+
+        // 질문 수에 따른 책 두께 계산 (기본 60px + 질문당 6px)
+        const BASE_BOOK_WIDTH = 60;
+        const QUESTION_WIDTH_INCREMENT = 6;
+        function getBookWidthForTitle(title) {
+            const count = getQuestionsForTitle(title).length;
+            return BASE_BOOK_WIDTH + count * QUESTION_WIDTH_INCREMENT;
+        }
+
+        // 해당 제목의 책 DOM 요소 찾아 두께 업데이트
+        function updateBookWidthForTitle(title) {
+            const books = document.querySelectorAll('.grimoire:not(.grimoire-add)');
+            for (const book of books) {
+                const text = book.textContent?.trim() || '';
+                if (text === title) {
+                    book.style.width = `${getBookWidthForTitle(title)}px`;
+                    break;
+                }
+            }
+        }
+
+        // 기본 질문인지 확인하는 함수
+        function isDefaultQuestion(questionText, title) {
+            if (!questionText || !title) return false;
+            const defaultPattern = `'${title}'에 대한 첫 번째 기록을 시작하십시오.`;
+            return questionText.trim() === defaultPattern;
+        }
+
+        // 선반의 사용 가능한 너비 계산
+        function getShelfAvailableWidth(shelfId) {
+            const shelf = document.getElementById(shelfId);
+            if (!shelf) return 0;
+            
+            const shelfWidth = shelf.offsetWidth;
+            const books = shelf.querySelectorAll('.grimoire:not(.grimoire-add)');
+            const addButton = shelf.querySelector('.grimoire-add');
+            
+            let booksTotalWidth = 0;
+            books.forEach(book => {
+                booksTotalWidth += book.offsetWidth;
+            });
+            
+            const gap = 6; // CSS에서 설정된 gap 값
+            // gap은 요소들 사이에만 있으므로 (요소 개수 - 1)개
+            const totalElements = books.length + (addButton ? 1 : 0);
+            const gapTotal = totalElements > 0 ? gap * (totalElements - 1) : 0;
+            const addButtonWidth = addButton ? 60 : 0; // 플러스 버튼 너비
+            
+            return shelfWidth - booksTotalWidth - gapTotal - addButtonWidth;
+        }
+
+        // 선반이 가득 찼는지 확인
+        function isShelfFull(shelfId, newBookWidth) {
+            const availableWidth = getShelfAvailableWidth(shelfId);
+            return availableWidth < newBookWidth;
+        }
+
+        // 다음 사용 가능한 선반에 책 추가하는 함수
+        function addBookToNextAvailableShelf(title) {
+            const bookWidth = getBookWidthForTitle(title);
+            
+            // 플러스 버튼이 있는 선반 찾기
+            let addButton = document.querySelector('.grimoire-add');
+            let currentShelf = addButton ? addButton.closest('.books-wrapper') : null;
+            
+            if (!currentShelf) {
+                // 플러스 버튼이 없으면 shelf-1에 추가
+                createGrimoireElement(title, 'shelf-1');
+                return;
+            }
+
+            const shelfId = currentShelf.id;
+            
+            // 현재 선반이 가득 찼는지 확인
+            if (isShelfFull(shelfId, bookWidth)) {
+                // 가득 찼으면 다음 선반으로 플러스 버튼 이동
+                moveAddButtonToNextShelf();
+                // 이동한 후 다시 선반 찾기
+                addButton = document.querySelector('.grimoire-add');
+                currentShelf = addButton ? addButton.closest('.books-wrapper') : null;
+                if (currentShelf) {
+                    createGrimoireElement(title, currentShelf.id);
+                } else {
+                    // 더 이상 선반이 없으면 shelf-1에 추가
+                    createGrimoireElement(title, 'shelf-1');
+                }
+            } else {
+                // 공간이 있으면 현재 선반에 추가
+                createGrimoireElement(title, shelfId);
+            }
+        }
+
+        function createGrimoireElement(title, shelfId) {
+            const shelf = document.getElementById(shelfId);
+            const addButton = shelf.querySelector('.grimoire-add');
+            
+            const colors = ['#4e1a1a', '#1a2b4a', '#1b3b2a', '#5d4037', '#281b3d', '#1c1c1c', '#3e2723', '#2c3e50'];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            const fixedHeight = 190; // 고정 높이 사용
+            const fixedWidth = getBookWidthForTitle(title); // 질문 수에 따른 두께
+
+            const newBook = document.createElement('div');
+            newBook.className = 'grimoire book-appear';
+            newBook.style.backgroundColor = randomColor;
+            newBook.style.height = `${fixedHeight}px`;
+            newBook.style.width = `${fixedWidth}px`;
+            newBook.innerHTML = `<div class="grimoire-decoration"></div>${title}`;
+            newBook.onclick = () => openGrimoire(title);
+
+            // 선반이 가득 찼는지 확인 (플러스 버튼이 없는 경우)
+            if (!addButton) {
+                // 플러스 버튼이 없으면 다음 선반으로 이동해야 함
+                shelf.appendChild(newBook);
+                moveAddButtonToNextShelf();
+                return;
+            }
+
+            // 플러스 버튼이 있으면 임시로 제거하고, 새 책을 추가한 후 플러스 버튼을 마지막으로 이동
+            addButton.remove();
+            shelf.appendChild(newBook);
+            
+            // 새 책 추가 후 플러스 버튼을 다시 추가
+            shelf.appendChild(addButton);
+        }
+
+        // 플러스 버튼을 다음 선반으로 이동하는 함수
+        function moveAddButtonToNextShelf() {
+            const addButton = document.querySelector('.grimoire-add');
+            if (!addButton) return;
+
+            const currentShelf = addButton.closest('.books-wrapper');
+            const currentShelfId = currentShelf ? currentShelf.id : null;
+
+            if (currentShelfId === 'shelf-1') {
+                // shelf-1에서 shelf-2로 이동
+                addButton.remove();
+                document.getElementById('shelf-2').appendChild(addButton);
+            } else if (currentShelfId === 'shelf-2') {
+                // shelf-2에서 shelf-3으로 이동
+                addButton.remove();
+                document.getElementById('shelf-3').appendChild(addButton);
+            }
+            // shelf-3이면 그대로 유지
+        }
         
         window.onload = function() {
+            loadFromLocalStorage();
             createBgStacks();
+            initLibrary();
         };
 
-        async function callGemini(prompt, systemInstruction = "") {
+        async function fetchGemini(prompt, systemInstruction = "") {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
             const payload = {
                 contents: [{ parts: [{ text: prompt }] }],
                 systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined
             };
-            for (let i = 0; i < 5; i++) {
-                try {
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    const result = await response.json();
-                    return result.candidates?.[0]?.content?.parts?.[0]?.text || "마력이 소진되었습니다.";
-                } catch (error) {
-                    await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
-                }
+            try {
+                const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const res = await response.json();
+                return res.candidates?.[0]?.content?.parts?.[0]?.text || "마력이 소진되었습니다.";
+            } catch (error) { return "결계가 불안정합니다."; }
+        }
+
+        function openGrimoire(title) {
+            currentOpenAnime = title;
+            if (!archiveData[title]) {
+                archiveData[title] = [{ q: `'${title}'에 대한 첫 번째 기록을 시작하십시오.`, a: "" }];
             }
-            return "서고의 흐름이 막혔습니다.";
-        }
-
-        async function generateAiQuestion() {
-            const btn = document.getElementById('gen-question-btn');
-            const btnText = document.getElementById('btn-text');
-            btn.disabled = true;
-            btnText.innerText = "⏳ 마력 연성 중...";
-            const res = await callGemini("애니메이션을 소재로 깊은 사유를 끌어내는 질문 1개. 제리에의 말투.", "너는 모든 마법의 정점 제리에다.");
-            currentQuestion = res.replace(/"/g, '').trim();
-            document.getElementById('current-question-display').innerText = currentQuestion;
-            btn.disabled = false;
-            btnText.innerText = "✨ AI 마력 연성";
-            showToast("MANDATE REVEALED");
-        }
-
-        async function refineWithAi() {
-            const answer = document.getElementById('input-answer').value;
-            const refineText = document.getElementById('refine-text');
-            if (!answer) return;
-            refineText.innerText = "⏳ 연성 중...";
-            const refined = await callGemini(`내용: "${answer}"\n\n고대 마도서풍으로 다듬어줘.`, "너는 평범한 글을 마법 문장으로 바꾸는 사서야.");
-            document.getElementById('input-answer').value = refined.trim();
-            refineText.innerText = "✨ AI 문장 연성";
-            showToast("RECORD REFINED");
-        }
-
-        async function getAiRecommendation() {
-            showToast("COMMUNING WITH ARCHIVES...");
-            const currentBooks = Array.from(document.querySelectorAll('.grimoire')).map(el => el.innerText).join(', ');
-            const res = await callGemini(`기록들: [${currentBooks}]. 제리에답게 애니 하나 추천해줘.`, "너는 제리에다.");
-            openGrimoire('운명의 계시', '그대에게 내리는 지령', res);
-        }
-
-        function showToast(m) {
-            const t = document.getElementById('toast');
-            t.innerText = m; t.style.display = 'block';
-            setTimeout(() => t.style.display = 'none', 3000);
-        }
-
-        function openGrimoire(t, q, a) {
-            document.getElementById('m-title').innerText = t;
-            document.getElementById('m-question').innerText = q;
-            document.getElementById('m-body').innerText = a;
-            document.getElementById('modalOverlay').style.display = 'flex';
-            setTimeout(() => document.getElementById('modalOverlay').style.opacity = '1', 10);
+            const questions = getQuestionsForTitle(title);
+            currentQIndex = questions.length - 1;
+            document.getElementById('book-title').innerText = title;
+            updatePageContent();
+            document.getElementById('book-modal').style.display = 'flex';
         }
 
         function closeGrimoire() {
-            document.getElementById('modalOverlay').style.opacity = '0';
-            setTimeout(() => document.getElementById('modalOverlay').style.display = 'none', 400);
+            if (confirm("저장하시겠습니까?")) {
+                saveCurrentAnswer();
+                saveToLocalStorage();
+            }
+            document.getElementById('book-modal').style.display = 'none';
         }
 
-        function openWriteModal() {
-            document.getElementById('write-q-display').innerText = `Q. ${currentQuestion}`;
-            document.getElementById('writeModal').style.display = 'flex';
+        function updatePageContent() {
+            const questions = getQuestionsForTitle(currentOpenAnime);
+            const hasQuestions = questions && questions.length > 0;
+            
+            const textarea = document.getElementById('a-input');
+            const saveBtn = document.getElementById('save-answer-btn');
+            
+            if (!hasQuestions) {
+                // 질문이 없을 때 비활성화
+                document.getElementById('q-text').innerText = "질문이 없습니다. 새 사유를 연성하십시오.";
+                document.getElementById('a-input').value = "";
+                document.getElementById('q-index').innerText = "0 / 0";
+                textarea.disabled = true;
+                if (saveBtn) saveBtn.disabled = true;
+                return;
+            }
+            
+            // 질문이 있을 때
+            const item = questions[currentQIndex];
+            const isDefault = isDefaultQuestion(item.q, currentOpenAnime);
+            
+            document.getElementById('q-text').innerText = item.q;
+            document.getElementById('a-input').value = item.a;
+            document.getElementById('q-index').innerText = `${currentQIndex + 1} / ${questions.length}`;
+            
+            // 기본 질문일 때는 수정과 저장 비활성화
+            if (isDefault) {
+                textarea.disabled = true;
+                if (saveBtn) saveBtn.disabled = true;
+            } else {
+                textarea.disabled = false;
+                if (saveBtn) saveBtn.disabled = false;
+            }
         }
 
-        function closeWriteModal() {
-            document.getElementById('writeModal').style.display = 'none';
+        function prevQuestion() { 
+            const questions = getQuestionsForTitle(currentOpenAnime);
+            if (currentQIndex > 0) { 
+                saveCurrentAnswer(); 
+                currentQIndex--; 
+                updatePageContent(); 
+            } 
+        }
+        function nextQuestion() { 
+            const questions = getQuestionsForTitle(currentOpenAnime);
+            if (currentQIndex < questions.length - 1) { 
+                saveCurrentAnswer(); 
+                currentQIndex++; 
+                updatePageContent(); 
+            } 
+        }
+        function saveCurrentAnswer() { 
+            if (!currentOpenAnime) return;
+            const questions = getQuestionsForTitle(currentOpenAnime);
+            if (questions[currentQIndex]) {
+                // 기본 질문일 때는 저장하지 않음
+                const isDefault = isDefaultQuestion(questions[currentQIndex].q, currentOpenAnime);
+                if (isDefault) return;
+                
+                questions[currentQIndex].a = document.getElementById('a-input').value;
+            }
         }
 
-        function saveRecord() {
-            const title = document.getElementById('input-title').value;
-            const answer = document.getElementById('input-answer').value;
-            if (!title || !answer) return;
-            const colors = ['#3d1a1a', '#1a2b4a', '#1b3b2a', '#4e342e', '#281b3d', '#1c1c1c'];
-            const color = colors[Math.floor(Math.random() * colors.length)];
-            const height = Math.floor(Math.random() * 70) + 190;
-            const newBook = document.createElement('div');
-            newBook.className = `grimoire`;
-            newBook.style.backgroundColor = color;
-            newBook.style.height = `${height}px`;
-            newBook.innerHTML = `<div class="grimoire-decoration"></div>${title}`;
-            newBook.onclick = () => openGrimoire(title, currentQuestion, answer);
-            document.getElementById('bookshelf').appendChild(newBook);
-            document.getElementById('book-count').innerText = `VOLUMES: ${document.querySelectorAll('.grimoire').length}`;
-            closeWriteModal();
-            showToast("RECORD SEALED");
+        async function conjureNewQuestion() {
+            saveCurrentAnswer();
+            
+            // 모든 질문에 답변이 있는지 확인
+            const questions = getQuestionsForTitle(currentOpenAnime);
+            const unansweredIndex = questions.findIndex((item, idx) => {
+                if (isDefaultQuestion(item.q, currentOpenAnime)) return false; // 기본 질문은 제외
+                const answer = (item.a || "").trim();
+                return answer === "";
+            });
+            if (unansweredIndex !== -1) {
+                alert("모든 질문에 답변을 입력한 후 새로운 질문을 생성할 수 있습니다.");
+                return;
+            }
+            
+            const btn = event.currentTarget;
+            btn.disabled = true;
+            const originalText = btn.innerText;
+            btn.innerText = "연성 중...";
+            
+            try {
+                // overview 가져오기 (없으면 작품 제목 기반 기본 설명 사용)
+                let overview = getOverviewForTitle(currentOpenAnime);
+                if (!overview || overview.trim() === "") {
+                    overview = `${currentOpenAnime}에 대한 작품입니다.`;
+                }
+
+                const requestBody = {
+                    title: currentOpenAnime,
+                    overview: overview
+                };
+
+                // ========== 테스트용 로그 (운영 시 삭제 필요) ==========
+                console.log("=== Open API 호출 요청 ===");
+                console.log("URL:", `${API_BASE}/api/generate-questions`);
+                console.log("Request Body:", JSON.stringify(requestBody, null, 2));
+                console.log("=====================================");
+                // ========================================================
+
+                const res = await fetch(`${API_BASE}/api/generate-questions`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(requestBody),
+                });
+                const data = await res.json();
+
+                // ========== 테스트용 로그 (운영 시 삭제 필요) ==========
+                console.log("=== Open API 호출 응답 ===");
+                console.log("Status:", res.status, res.statusText);
+                console.log("Response Data:", JSON.stringify(data, null, 2));
+                if (data.questions) {
+                    console.log("생성된 질문 개수:", data.questions.length);
+                    data.questions.forEach((q, idx) => {
+                        console.log(`질문 ${idx + 1}:`, q);
+                    });
+                }
+                console.log("=====================================");
+                // ========================================================
+
+                if (!res.ok) {
+                    throw new Error(data.error || "질문 생성 실패");
+                }
+
+                const newQuestions = data.questions || [];
+                if (newQuestions.length === 0) {
+                    throw new Error("생성된 질문이 없습니다.");
+                }
+
+                // 질문 5개를 archiveData에 추가
+                const questions = getQuestionsForTitle(currentOpenAnime);
+                
+                // 기본 질문이 있으면 삭제
+                const defaultIndex = questions.findIndex((item) => isDefaultQuestion(item.q, currentOpenAnime));
+                if (defaultIndex !== -1) {
+                    questions.splice(defaultIndex, 1);
+                }
+                
+                // 새 질문 추가
+                const startIndex = questions.length;
+                newQuestions.forEach((q) => {
+                    questions.push({ q: q.trim(), a: "" });
+                });
+                
+                // 생성된 질문 중 첫 번째로 이동
+                currentQIndex = startIndex;
+                updatePageContent();
+                updateBookWidthForTitle(currentOpenAnime);
+                saveToLocalStorage();
+            } catch (error) {
+                console.error("질문 생성 오류:", error);
+                alert("질문 생성 중 오류가 발생했습니다: " + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = originalText;
+            }
         }
+
+        function deleteCurrentQuestion() {
+            if (!currentOpenAnime) return;
+            
+            const questions = getQuestionsForTitle(currentOpenAnime);
+            if (questions.length === 0) return;
+            
+            if (!confirm("이 질문을 삭제하면 해당 답변도 함께 삭제됩니다. 삭제하시겠습니까?")) {
+                return;
+            }
+            
+            // 현재 답변 저장
+            saveCurrentAnswer();
+            
+            // 현재 질문 삭제
+            questions.splice(currentQIndex, 1);
+            
+            // 질문이 모두 삭제된 경우
+            if (questions.length === 0) {
+                currentQIndex = 0;
+                updatePageContent();
+                saveToLocalStorage();
+                return;
+            }
+            
+            // 삭제 후 적절한 인덱스로 이동
+            // 현재 인덱스가 마지막이었으면 이전 질문으로, 아니면 현재 인덱스 유지 (다음 질문이 앞으로 이동)
+            if (currentQIndex >= questions.length) {
+                currentQIndex = questions.length - 1;
+            }
+            
+            updatePageContent();
+            updateBookWidthForTitle(currentOpenAnime);
+            saveToLocalStorage();
+        }
+
+        // TMDB 검색 모달 관련 함수들
+        function openTmdbSearchModal() {
+            document.getElementById('tmdb-search-modal').style.display = 'flex';
+            document.getElementById('tmdb-search-input').focus();
+        }
+
+        function closeTmdbSearchModal() {
+            document.getElementById('tmdb-search-modal').style.display = 'none';
+            document.getElementById('tmdb-search-input').value = '';
+            document.getElementById('tmdb-search-results').innerHTML = '';
+            document.getElementById('tmdb-search-status').textContent = '';
+        }
+
+        function setTmdbStatus(text, isError = false) {
+            const statusEl = document.getElementById('tmdb-search-status');
+            statusEl.textContent = text;
+            statusEl.className = "mb-4 text-sm min-h-[1.5rem] " + (isError ? "text-red-400" : "text-stone-400");
+        }
+
+        function escapeHtml(s) {
+            const div = document.createElement("div");
+            div.textContent = s;
+            return div.innerHTML;
+        }
+
+        function renderSearchResult(item, index) {
+            const title = item.title || item.name;
+            const date = item.release_date || item.first_air_date || "";
+            const poster = item.poster_path ? IMAGE_BASE + item.poster_path : null;
+            const typeLabel = item.media_type === "movie" ? "영화" : item.media_type === "tv" ? "TV" : item.media_type;
+
+            return `
+                <div class="search-result-item" onclick="selectWorkByIndex(${index})">
+                    ${poster ? `<img src="${poster}" alt="" class="search-result-poster" />` : '<div class="search-result-poster-placeholder">No poster</div>'}
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap mb-2">
+                            <span class="font-bold text-lg text-stone-100">${escapeHtml(title)}</span>
+                            <span class="text-xs px-2 py-0.5 rounded bg-stone-700 text-stone-300">${escapeHtml(typeLabel)}</span>
+                            ${date ? `<span class="text-stone-500 text-sm">${date.slice(0, 4)}</span>` : ""}
+                        </div>
+                        ${item.overview ? `<p class="mt-2 text-stone-400 text-sm line-clamp-3">${escapeHtml(item.overview)}</p>` : ""}
+                        <p class="mt-2 text-stone-500 text-xs">평점 ${(item.vote_average ?? 0).toFixed(1)}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function doTmdbSearch() {
+            const searchInput = document.getElementById('tmdb-search-input');
+            const searchBtn = document.getElementById('tmdb-search-btn');
+            const resultsEl = document.getElementById('tmdb-search-results');
+            const q = searchInput.value.trim();
+            
+            if (!q) {
+                setTmdbStatus("검색어를 입력하세요.");
+                return;
+            }
+
+            searchBtn.disabled = true;
+            setTmdbStatus("대도서관에서 찾고 있습니다…");
+            resultsEl.innerHTML = "";
+
+            try {
+                const res = await fetch(`${API_BASE}/api/tmdb/search?q=${encodeURIComponent(q)}`);
+                const data = await res.json();
+
+                if (!res.ok) {
+                    setTmdbStatus("오류: " + (data.error || data.status_message || res.status), true);
+                    return;
+                }
+
+                const list = data.results || [];
+                if (list.length === 0) {
+                    setTmdbStatus("검색 결과가 없습니다.");
+                    return;
+                }
+
+                setTmdbStatus(`총 ${data.total_results ?? list.length}건 (페이지 ${data.page ?? 1})`);
+                currentSearchResults = list;
+                resultsEl.innerHTML = list.map((item, index) => renderSearchResult(item, index)).join("");
+            } catch (err) {
+                setTmdbStatus("요청 실패: " + err.message, true);
+            } finally {
+                searchBtn.disabled = false;
+            }
+        }
+
+        // Enter 키로 검색
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('tmdb-search-input');
+            if (searchInput) {
+                searchInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        doTmdbSearch();
+                    }
+                });
+            }
+        });
+
+        function selectWorkByIndex(index) {
+            const item = currentSearchResults[index];
+            if (!item) return;
+            
+            const title = item.title || item.name;
+            
+            // 이미 존재하는 작품인지 확인
+            if (archiveData[title]) {
+                setTmdbStatus("이미 추가된 작품입니다.", true);
+                return;
+            }
+
+            // archiveData에 추가
+            archiveData[title] = [{ q: `'${title}'에 대한 첫 번째 기록을 시작하십시오.`, a: "" }];
+            
+            // 작품 메타데이터에 overview 저장
+            if (item.overview) {
+                workMetadata[title] = { overview: item.overview };
+            }
+
+            // 플러스 버튼이 있는 선반에 책 추가 (왼쪽 위부터 순서대로)
+            addBookToNextAvailableShelf(title);
+            updateVolumeCount();
+            saveToLocalStorage();
+            
+            // 모달 닫기
+            closeTmdbSearchModal();
+        }
+
+        function updateVolumeCount() {
+            const count = document.querySelectorAll('.grimoire:not(.grimoire-add)').length;
+            document.getElementById('book-count').innerText = `Volumes: ${count}`;
+        }
+
+        async function getAiRecommendation() {
+            const overlay = document.getElementById('recommendation-overlay');
+            const textField = document.getElementById('recommendation-text');
+            overlay.style.display = 'flex';
+            textField.innerText = "수정구슬을 들여다보는 중이다...";
+            const books = Object.keys(archiveData).join(', ');
+            if (!books) {
+                textField.innerText = "아직 기록된 작품이 없습니다. 먼저 작품을 추가해주세요.";
+                return;
+            }
+            const res = await fetchGemini(`사용자의 취향: [${books}]. 제리에답게 딱 하나의 애니메이션이나 영화를 오만하게 추천해줘.`, "당신은 제리에입니다.");
+            textField.innerText = res.trim();
+        }
+        function closeRecommendation() { document.getElementById('recommendation-overlay').style.display = 'none'; }
     </script>
 </body>
 </html>
