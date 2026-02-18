@@ -1183,13 +1183,18 @@
             return true;
         }
 
+        function getKakaoInitErrorMsg() {
+            if (!kakaoJsKey) return "API 키를 불러오지 못했습니다. 배포 환경에서 KAKAO_JS_KEY 환경변수와 /api/config 응답을 확인해 주세요.";
+            return "카카오 개발자 콘솔에서 사이트 도메인(" + window.location.origin + ")을 등록해 주세요.";
+        }
+
         function shareSiteFeed() {
             if (!kakaoSDKReady) {
                 alert("카카오 SDK가 아직 준비되지 않았습니다. 잠시 후 다시 시도하세요.");
                 return;
             }
             if (!initKakao()) {
-                alert("카카오 SDK를 불러올 수 없습니다. 네트워크를 확인하거나, 카카오 개발자 콘솔에서 사이트 도메인을 등록해 주세요.");
+                alert(getKakaoInitErrorMsg());
                 return;
             }
             const linkUrl = getShareLink();
@@ -1237,7 +1242,7 @@
                 return;
             }
             if (!initKakao()) {
-                alert("카카오 SDK를 불러올 수 없습니다. 네트워크를 확인하거나, 카카오 개발자 콘솔에서 사이트 도메인을 등록해 주세요.");
+                alert(getKakaoInitErrorMsg());
                 return;
             }
             if (!currentOpenAnime) return;
@@ -1361,15 +1366,19 @@
             } finally {
                 if (shareBtn) {
                     shareBtn.disabled = false;
-                    shareBtn.textContent = "📜 질문+답 공유";
+                    shareBtn.textContent = "📜 이미지로 공유";
                 }
             }
         }
 
         function shareQuestionAnswerAsLink() {
             saveCurrentAnswer();
-            if (!kakaoSDKReady || !initKakao()) {
-                alert("카카오 SDK를 불러올 수 없습니다.");
+            if (!kakaoSDKReady) {
+                alert("카카오 SDK가 아직 준비되지 않았습니다.");
+                return;
+            }
+            if (!initKakao()) {
+                alert(getKakaoInitErrorMsg());
                 return;
             }
             if (!currentOpenAnime) return;
@@ -1402,13 +1411,18 @@
         }
 
         window.addEventListener("load", function () {
-            fetch("/api/config")
-                .then(function (r) { return r.json(); })
+            fetch(window.location.origin + "/api/config")
+                .then(function (r) {
+                    if (!r.ok) throw new Error("config " + r.status);
+                    return r.json();
+                })
                 .then(function (data) {
                     kakaoJsKey = (data.kakaoJsKey || "").trim();
                     tryInitKakao();
                 })
-                .catch(function () {});
+                .catch(function (e) {
+                    console.warn("[카카오] 설정 로드 실패:", e);
+                });
             if (window.Kakao) onKakaoSDKLoaded();
         });
     </script>
