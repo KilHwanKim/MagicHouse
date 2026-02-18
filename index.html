@@ -1425,6 +1425,7 @@
                 .then(function (data) {
                     kakaoJsKey = (data.kakaoJsKey || "").trim();
                     tryInitKakao();
+                    if (window.Kakao && window.Kakao.Share) kakaoSDKReady = true;
                 })
                 .catch(function (e) {
                     console.warn("[카카오] 설정 로드 실패:", e);
