@@ -151,10 +151,15 @@ app.post("/api/generate-questions", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-  console.log(`TMDB test: http://localhost:${PORT}/tests/tmdb.html`);
-  console.log(`질문 생성 테스트: http://localhost:${PORT}/tests/generate-questions.html`);
-  console.log(`로컬 스토리지 테스트: http://localhost:${PORT}/tests/local-storage.html`);
-  console.log(`광고 테스트: http://localhost:${PORT}/tests/ad.html`);
-});
+// Vercel 서버리스에서는 listen 하지 않음
+if (typeof process !== "undefined" && process.env.VERCEL !== "1") {
+  app.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}`);
+    console.log(`TMDB test: http://localhost:${PORT}/tests/tmdb.html`);
+    console.log(`질문 생성 테스트: http://localhost:${PORT}/tests/generate-questions.html`);
+    console.log(`로컬 스토리지 테스트: http://localhost:${PORT}/tests/local-storage.html`);
+    console.log(`광고 테스트: http://localhost:${PORT}/tests/ad.html`);
+  });
+}
+
+export default app;
