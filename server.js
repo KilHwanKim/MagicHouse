@@ -104,11 +104,19 @@ app.post("/api/generate-questions", async (req, res) => {
   if (!openaiKey) {
     return res.status(500).json({ error: "OPENAI_API_KEY is not set in .env" });
   }
-  const { title, overview } = req.body || {};
+  const { title, overview, existingQA } = req.body || {};
   const overviewText = typeof overview === "string" ? overview.trim() : "";
   if (!overviewText) {
     return res.status(400).json({ error: "body.overview is required" });
   }
+
+  // 기존 Q&A (optional)
+  const qaList = Array.isArray(existingQA)
+    ? existingQA
+        .filter((x) => x && typeof x.q === "string")
+        .slice(-15)
+        .map((x) => ({ q: String(x.q).trim(), a: typeof x.a === "string" ? String(x.a).trim() : "" }))
+    : [];
 
   // 시스템 프롬프트 파일 읽기
   let systemContent;
@@ -120,9 +128,16 @@ app.post("/api/generate-questions", async (req, res) => {
     return res.status(500).json({ error: "프롬프트 파일을 읽을 수 없습니다." });
   }
 
-  const userContent = title
+  let userContent = title
     ? `작품 제목: ${title}\n\n줄거리:\n${overviewText}`
     : `줄거리:\n${overviewText}`;
+
+  if (qaList.length > 0) {
+    const qaBlock = qaList
+      .map((item) => `Q. ${item.q}\nA. ${item.a || "(미작성)"}`)
+      .join("\n\n");
+    userContent += `\n\n[기존 Q&A - 아래와 중복되지 않도록 하세요. 답변이 있는 경우, 그 답변을 바탕으로 꼬리질문(후속 질문)을 생성해도 됩니다]\n${qaBlock}`;
+  }
 
   // ========== 테스트용 로그 (운영 시 삭제 필요) ==========
   console.log("=== OpenAI API 호출 시작 ===");

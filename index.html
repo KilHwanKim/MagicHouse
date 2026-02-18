@@ -1014,9 +1014,17 @@
                     overview = `${currentOpenAnime}에 대한 작품입니다.`;
                 }
 
+                // 기존 Q&A (기본 질문 제외, 최근 15개 제한)
+                const allQuestions = getQuestionsForTitle(currentOpenAnime);
+                const existingQA = allQuestions
+                    .filter((item) => !isDefaultQuestion(item.q, currentOpenAnime))
+                    .slice(-15)
+                    .map((item) => ({ q: item.q, a: item.a || "" }));
+
                 const requestBody = {
                     title: currentOpenAnime,
-                    overview: overview
+                    overview: overview,
+                    existingQA: existingQA
                 };
 
                 // ========== 테스트용 로그 (운영 시 삭제 필요) ==========
