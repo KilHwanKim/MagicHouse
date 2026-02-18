@@ -486,8 +486,8 @@
                     <button id="save-answer-btn" onclick="saveCurrentAnswer(); saveToLocalStorage();" class="gold-btn text-[10px] px-6 py-2">봉인 완료</button>
                 </div>
                 <div class="mt-4 flex justify-end gap-2 flex-wrap">
-                    <button type="button" id="share-qa-btn" onclick="setTimeout(shareQuestionAnswerFeed,0)" class="gold-btn text-[10px] px-4 py-2" title="질문과 답변을 이미지로 카카오톡 공유">📜 이미지로 공유</button>
-                    <button type="button" id="share-qa-link-btn" onclick="setTimeout(shareQuestionAnswerAsLink,0)" class="gold-btn text-[10px] px-4 py-2" title="질문과 답변 링크를 카카오톡 공유">🔗 링크로 공유</button>
+                    <button type="button" id="share-qa-btn" onclick="queueShareQuestionAnswerFeed()" class="gold-btn text-[10px] px-4 py-2" title="질문과 답변을 이미지로 카카오톡 공유">📜 이미지로 공유</button>
+                    <button type="button" id="share-qa-link-btn" onclick="setTimeout(shareQuestionAnswerAsLink, 0)" class="gold-btn text-[10px] px-4 py-2" title="질문과 답변 링크를 카카오톡 공유">🔗 링크로 공유</button>
                 </div>
                 <div class="mt-4 pt-4 border-t border-[#36241a]/5 flex justify-between items-center text-[9px] text-[#36241a]/40 font-bold tracking-[0.2em] uppercase">
                     <span>Fragment #ARC-9</span>
@@ -1188,6 +1188,12 @@
             return "카카오 개발자 콘솔에서 사이트 도메인(" + window.location.origin + ")을 등록해 주세요.";
         }
 
+        function queueShareQuestionAnswerFeed() {
+            requestAnimationFrame(function () {
+                setTimeout(shareQuestionAnswerFeed, 0);
+            });
+        }
+
         function shareSiteFeed() {
             if (!kakaoSDKReady) {
                 alert("카카오 SDK가 아직 준비되지 않았습니다. 잠시 후 다시 시도하세요.");
@@ -1294,7 +1300,7 @@
 
             const elWidth = pageLeft.offsetWidth || 400;
             const elHeight = pageLeft.scrollHeight || pageLeft.offsetHeight;
-            const scale = elHeight > 1200 ? 1 : 2;
+            const scale = 1;
 
             try {
                 const canvas = await html2canvas(pageLeft, {
