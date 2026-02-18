@@ -558,6 +558,26 @@
             return workMetadata[title]?.overview || "";
         }
 
+        // 질문 수에 따른 책 두께 계산 (기본 60px + 질문당 6px)
+        const BASE_BOOK_WIDTH = 60;
+        const QUESTION_WIDTH_INCREMENT = 6;
+        function getBookWidthForTitle(title) {
+            const count = getQuestionsForTitle(title).length;
+            return BASE_BOOK_WIDTH + count * QUESTION_WIDTH_INCREMENT;
+        }
+
+        // 해당 제목의 책 DOM 요소 찾아 두께 업데이트
+        function updateBookWidthForTitle(title) {
+            const books = document.querySelectorAll('.grimoire:not(.grimoire-add)');
+            for (const book of books) {
+                const text = book.textContent?.trim() || '';
+                if (text === title) {
+                    book.style.width = `${getBookWidthForTitle(title)}px`;
+                    break;
+                }
+            }
+        }
+
         // 기본 질문인지 확인하는 함수
         function isDefaultQuestion(questionText, title) {
             if (!questionText || !title) return false;
@@ -596,7 +616,7 @@
 
         // 다음 사용 가능한 선반에 책 추가하는 함수
         function addBookToNextAvailableShelf(title) {
-            const FIXED_BOOK_WIDTH = 60; // 고정 책 너비
+            const bookWidth = getBookWidthForTitle(title);
             
             // 플러스 버튼이 있는 선반 찾기
             let addButton = document.querySelector('.grimoire-add');
@@ -604,39 +624,39 @@
             
             if (!currentShelf) {
                 // 플러스 버튼이 없으면 shelf-1에 추가
-                createGrimoireElement(title, 'shelf-1', FIXED_BOOK_WIDTH);
+                createGrimoireElement(title, 'shelf-1');
                 return;
             }
 
             const shelfId = currentShelf.id;
             
             // 현재 선반이 가득 찼는지 확인
-            if (isShelfFull(shelfId, FIXED_BOOK_WIDTH)) {
+            if (isShelfFull(shelfId, bookWidth)) {
                 // 가득 찼으면 다음 선반으로 플러스 버튼 이동
                 moveAddButtonToNextShelf();
                 // 이동한 후 다시 선반 찾기
                 addButton = document.querySelector('.grimoire-add');
                 currentShelf = addButton ? addButton.closest('.books-wrapper') : null;
                 if (currentShelf) {
-                    createGrimoireElement(title, currentShelf.id, FIXED_BOOK_WIDTH);
+                    createGrimoireElement(title, currentShelf.id);
                 } else {
                     // 더 이상 선반이 없으면 shelf-1에 추가
-                    createGrimoireElement(title, 'shelf-1', FIXED_BOOK_WIDTH);
+                    createGrimoireElement(title, 'shelf-1');
                 }
             } else {
                 // 공간이 있으면 현재 선반에 추가
-                createGrimoireElement(title, shelfId, FIXED_BOOK_WIDTH);
+                createGrimoireElement(title, shelfId);
             }
         }
 
-        function createGrimoireElement(title, shelfId, bookWidth = 60) {
+        function createGrimoireElement(title, shelfId) {
             const shelf = document.getElementById(shelfId);
             const addButton = shelf.querySelector('.grimoire-add');
             
             const colors = ['#4e1a1a', '#1a2b4a', '#1b3b2a', '#5d4037', '#281b3d', '#1c1c1c', '#3e2723', '#2c3e50'];
             const randomColor = colors[Math.floor(Math.random() * colors.length)];
             const fixedHeight = 190; // 고정 높이 사용
-            const fixedWidth = bookWidth; // 고정 두께 사용
+            const fixedWidth = getBookWidthForTitle(title); // 질문 수에 따른 두께
 
             const newBook = document.createElement('div');
             newBook.className = 'grimoire book-appear';
@@ -853,6 +873,7 @@
                 // 생성된 질문 중 첫 번째로 이동
                 currentQIndex = startIndex;
                 updatePageContent();
+                updateBookWidthForTitle(currentOpenAnime);
             } catch (error) {
                 console.error("질문 생성 오류:", error);
                 alert("질문 생성 중 오류가 발생했습니다: " + error.message);
@@ -888,6 +909,7 @@
             }
             
             updatePageContent();
+            updateBookWidthForTitle(currentOpenAnime);
         }
 
         // TMDB 검색 모달 관련 함수들
