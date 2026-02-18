@@ -22,22 +22,73 @@ app.get("/api/config", (req, res) => {
   });
 });
 
+async function correctQueryWithLLM(openaiKey, systemPrompt, userQuery) {
+  const r = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${openaiKey}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userQuery },
+      ],
+      temperature: 0.3,
+      max_tokens: 64,
+    }),
+  });
+  const data = await r.json();
+  if (!r.ok) return null;
+  return (data.choices?.[0]?.message?.content || "").trim();
+}
+
 // TMDB 검색 프록시 (API 키 노출 방지)
 app.get("/api/tmdb/search", async (req, res) => {
   const key = process.env.TMDB_API_KEY;
   if (!key) {
     return res.status(500).json({ error: "TMDB_API_KEY is not set in .env" });
   }
-  const q = (req.query.q || "").trim();
+  let q = (req.query.q || "").trim();
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
   if (!q) {
     return res.status(400).json({ error: "Query parameter 'q' is required" });
   }
 
-  const url = `${TMDB_BASE}/search/multi?api_key=${key}&query=${encodeURIComponent(q)}&language=ko-KR&page=${page}&include_adult=false`;
+  const buildUrl = (query) =>
+    `${TMDB_BASE}/search/multi?api_key=${key}&query=${encodeURIComponent(query)}&language=ko-KR&page=${page}&include_adult=false`;
+
   try {
-    const r = await fetch(url);
-    const data = await r.json();
+    let r = await fetch(buildUrl(q));
+    let data = await r.json();
+    if (!r.ok) {
+      return res.status(r.status).json(data);
+    }
+
+    if (data.results && data.results.length > 0) {
+      return res.json(data);
+    }
+
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (!openaiKey) {
+      return res.json(data);
+    }
+
+    let systemPrompt;
+    try {
+      systemPrompt = readFileSync(path.join(__dirname, "prompts", "search-query-correction.txt"), "utf-8").trim();
+    } catch {
+      return res.json(data);
+    }
+
+    const corrected = await correctQueryWithLLM(openaiKey, systemPrompt, q);
+    if (!corrected || corrected === q) {
+      return res.json(data);
+    }
+
+    r = await fetch(buildUrl(corrected));
+    data = await r.json();
     if (!r.ok) {
       return res.status(r.status).json(data);
     }
