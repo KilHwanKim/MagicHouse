@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "outputDirectory": "public",
+  "buildCommand": "",
   "rewrites": [
     { "source": "/", "destination": "/index.html" }
   ]

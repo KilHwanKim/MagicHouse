@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TMDB API 테스트</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-stone-900 text-stone-100 min-h-screen p-6">
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-2xl font-bold mb-2">TMDB 검색 테스트</h1>
+    <p class="text-stone-400 text-sm mb-6">영화·TV·애니 검색 결과를 확인합니다. 서버가 <code class="bg-stone-800 px-1 rounded">.env</code> 의 TMDB_API_KEY 로 호출합니다.</p>
+
+    <div class="flex gap-2 mb-6">
+      <input
+        type="text"
+        id="searchInput"
+        placeholder="제목 입력 (예: 프리렌, 귀멸)"
+        class="flex-1 rounded-lg bg-stone-800 border border-stone-600 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
+        autocomplete="off"
+      />
+      <button
+        id="searchBtn"
+        class="px-6 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 font-medium transition-colors"
+      >
+        검색
+      </button>
+    </div>
+
+    <div id="status" class="mb-4 text-stone-400 text-sm min-h-[1.5rem]"></div>
+    <div id="results" class="space-y-4"></div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+    const IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
+
+    const searchInput = document.getElementById("searchInput");
+    const searchBtn = document.getElementById("searchBtn");
+    const status = document.getElementById("status");
+    const results = document.getElementById("results");
+
+    function setStatus(text, isError = false) {
+      status.textContent = text;
+      status.className = "mb-4 text-sm min-h-[1.5rem] " + (isError ? "text-red-400" : "text-stone-400");
+    }
+
+    function renderItem(item) {
+      const title = item.title || item.name;
+      const date = item.release_date || item.first_air_date || "";
+      const poster = item.poster_path ? IMAGE_BASE + item.poster_path : null;
+      const typeLabel = item.media_type === "movie" ? "영화" : item.media_type === "tv" ? "TV" : item.media_type;
+
+      return `
+        <div class="flex gap-4 p-4 rounded-lg bg-stone-800 border border-stone-700">
+          ${poster ? `<img src="${poster}" alt="" class="w-24 h-36 object-cover rounded" />` : "<div class=\"w-24 h-36 bg-stone-700 rounded flex items-center justify-center text-stone-500 text-xs\">No poster</div>"}
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-bold text-lg">${escapeHtml(title)}</span>
+              <span class="text-xs px-2 py-0.5 rounded bg-stone-600 text-stone-300">${escapeHtml(typeLabel)}</span>
+              ${date ? `<span class="text-stone-500 text-sm">${date.slice(0, 4)}</span>` : ""}
+            </div>
+            ${item.overview ? `<p class="mt-2 text-stone-400 text-sm line-clamp-3">${escapeHtml(item.overview)}</p>` : ""}
+            <p class="mt-1 text-stone-500 text-xs">ID: ${item.id} · 평점 ${(item.vote_average ?? 0).toFixed(1)}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function escapeHtml(s) {
+      const div = document.createElement("div");
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    async function doSearch() {
+      const q = searchInput.value.trim();
+      if (!q) {
+        setStatus("검색어를 입력하세요.");
+        return;
+      }
+
+      searchBtn.disabled = true;
+      setStatus("대도서관에서 찾고 있습니다…");
+      results.innerHTML = "";
+
+      try {
+        const res = await fetch(`${API_BASE}/api/tmdb/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          setStatus("오류: " + (data.error || data.status_message || res.status), true);
+          return;
+        }
+
+        const list = data.results || [];
+        if (list.length === 0) {
+          setStatus("검색 결과가 없습니다.");
+          return;
+        }
+
+        setStatus(`총 ${data.total_results ?? list.length}건 (페이지 ${data.page ?? 1})`);
+        results.innerHTML = list.map(renderItem).join("");
+      } catch (err) {
+        setStatus("요청 실패: " + err.message, true);
+      } finally {
+        searchBtn.disabled = false;
+      }
+    }
+
+    searchBtn.addEventListener("click", doSearch);
+    searchInput.addEventListener("keydown", (e) => { if (e.key === "Enter") doSearch(); });
+  </script>
+</body>
+</html>
