@@ -429,7 +429,7 @@
                         <div id="q-text" class="text-lg font-bold border-l-4 border-[#c5a059]/50 pl-6 py-2 italic text-[#4a342e] pr-12">질문이 표시됩니다.</div>
                         <button 
                             onclick="deleteCurrentQuestion()" 
-                            class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-[#36241a]/40 hover:text-red-600 text-xl font-bold p-1 rounded hover:bg-red-50"
+                            class="absolute top-2 right-2 opacity-70 hover:opacity-100 transition-opacity text-[#36241a]/60 hover:text-red-600 text-xl font-bold p-1 rounded hover:bg-red-50"
                             title="질문 삭제"
                         >
                             ×
@@ -452,7 +452,7 @@
                     <textarea id="a-input" class="mana-input flex-1" placeholder="당신의 통찰을 이곳에 봉인하십시오..."></textarea>
                 </div>
                 <div class="mt-6 flex justify-end gap-3 items-center">
-                    <button onclick="saveCurrentAnswer()" class="gold-btn text-[10px] px-6 py-2">봉인 완료</button>
+                    <button id="save-answer-btn" onclick="saveCurrentAnswer(); saveToLocalStorage();" class="gold-btn text-[10px] px-6 py-2">봉인 완료</button>
                 </div>
                 <div class="mt-4 pt-4 border-t border-[#36241a]/5 flex justify-between items-center text-[9px] text-[#36241a]/40 font-bold tracking-[0.2em] uppercase">
                     <span>Fragment #ARC-9</span>
@@ -506,11 +506,41 @@
         const API_BASE = window.location.origin;
         const IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
         
+        const STORAGE_KEY = "arcane_archive";
+        
         // 초기 데이터 (빈 상태로 시작)
-        let archiveData = {}; // { title: { questions: [...], overview: "" } }
+        let archiveData = {}; // { title: [{ q, a }, ...] }
         let workMetadata = {}; // { title: { overview: "" } } - 작품 메타데이터
         
         let currentOpenAnime = "";
+
+        function loadFromLocalStorage() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    const data = JSON.parse(raw);
+                    if (data && typeof data.archiveData === "object") {
+                        archiveData = data.archiveData || {};
+                    }
+                    if (data && typeof data.workMetadata === "object") {
+                        workMetadata = data.workMetadata || {};
+                    }
+                }
+            } catch (e) {
+                console.warn("로컬 스토리지 로드 실패:", e);
+            }
+        }
+
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                    archiveData,
+                    workMetadata
+                }));
+            } catch (e) {
+                console.warn("로컬 스토리지 저장 실패:", e);
+            }
+        }
         let currentQIndex = 0;
         let currentSearchResults = [];
 
@@ -703,6 +733,7 @@
         }
         
         window.onload = function() {
+            loadFromLocalStorage();
             createBgStacks();
             initLibrary();
         };
@@ -733,7 +764,10 @@
         }
 
         function closeGrimoire() {
-            saveCurrentAnswer();
+            if (confirm("저장하시겠습니까?")) {
+                saveCurrentAnswer();
+                saveToLocalStorage();
+            }
             document.getElementById('book-modal').style.display = 'none';
         }
 
@@ -742,7 +776,7 @@
             const hasQuestions = questions && questions.length > 0;
             
             const textarea = document.getElementById('a-input');
-            const saveBtn = document.querySelector('button[onclick="saveCurrentAnswer()"]');
+            const saveBtn = document.getElementById('save-answer-btn');
             
             if (!hasQuestions) {
                 // 질문이 없을 때 비활성화
@@ -801,11 +835,24 @@
         }
 
         async function conjureNewQuestion() {
+            saveCurrentAnswer();
+            
+            // 모든 질문에 답변이 있는지 확인
+            const questions = getQuestionsForTitle(currentOpenAnime);
+            const unansweredIndex = questions.findIndex((item, idx) => {
+                if (isDefaultQuestion(item.q, currentOpenAnime)) return false; // 기본 질문은 제외
+                const answer = (item.a || "").trim();
+                return answer === "";
+            });
+            if (unansweredIndex !== -1) {
+                alert("모든 질문에 답변을 입력한 후 새로운 질문을 생성할 수 있습니다.");
+                return;
+            }
+            
             const btn = event.currentTarget;
             btn.disabled = true;
             const originalText = btn.innerText;
             btn.innerText = "연성 중...";
-            saveCurrentAnswer();
             
             try {
                 // overview 가져오기 (없으면 작품 제목 기반 기본 설명 사용)
@@ -874,6 +921,7 @@
                 currentQIndex = startIndex;
                 updatePageContent();
                 updateBookWidthForTitle(currentOpenAnime);
+                saveToLocalStorage();
             } catch (error) {
                 console.error("질문 생성 오류:", error);
                 alert("질문 생성 중 오류가 발생했습니다: " + error.message);
@@ -889,6 +937,10 @@
             const questions = getQuestionsForTitle(currentOpenAnime);
             if (questions.length === 0) return;
             
+            if (!confirm("이 질문을 삭제하면 해당 답변도 함께 삭제됩니다. 삭제하시겠습니까?")) {
+                return;
+            }
+            
             // 현재 답변 저장
             saveCurrentAnswer();
             
@@ -899,6 +951,7 @@
             if (questions.length === 0) {
                 currentQIndex = 0;
                 updatePageContent();
+                saveToLocalStorage();
                 return;
             }
             
@@ -910,6 +963,7 @@
             
             updatePageContent();
             updateBookWidthForTitle(currentOpenAnime);
+            saveToLocalStorage();
         }
 
         // TMDB 검색 모달 관련 함수들
@@ -1034,6 +1088,7 @@
             // 플러스 버튼이 있는 선반에 책 추가 (왼쪽 위부터 순서대로)
             addBookToNextAvailableShelf(title);
             updateVolumeCount();
+            saveToLocalStorage();
             
             // 모달 닫기
             closeTmdbSearchModal();
