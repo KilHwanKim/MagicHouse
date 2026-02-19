@@ -615,8 +615,10 @@
                     <button id="save-answer-btn" onclick="saveAndCloseGrimoire()" class="gold-btn text-[10px] px-6 py-2">봉인 완료</button>
                 </div>
                 <div class="mt-4 flex justify-end gap-2 flex-wrap">
-                    <button type="button" id="share-qa-btn" onclick="queueShareQuestionAnswerFeed()" class="gold-btn text-[10px] px-4 py-2" title="질문과 답변을 이미지로 카카오톡 공유">📜 이미지로 공유</button>
-                    <button type="button" id="share-qa-link-btn" onclick="setTimeout(shareQuestionAnswerAsLink, 0)" class="gold-btn text-[10px] px-4 py-2" title="질문과 답변 링크를 카카오톡 공유">🔗 링크로 공유</button>
+                    <button type="button" id="share-qa-btn" onclick="queueShareQuestionAnswerFeed()" class="gold-btn text-[10px] px-4 py-2" title="질문과 답변을 카카오톡으로 공유">💬 카카오톡 공유</button>
+                </div>
+                <div class="mt-2 flex justify-end">
+                    <button type="button" id="share-book-btn" onclick="shareBookToKV()" class="gold-btn text-[10px] px-4 py-2" title="책 전체를 공유 기록에 저장">📚 다른 사람한테 보여주기</button>
                 </div>
                 <div class="mt-4 pt-4 border-t border-[#36241a]/5 flex justify-between items-center text-[9px] text-[#36241a]/40 font-bold tracking-[0.2em] uppercase">
                     <span>Fragment #ARC-9</span>
@@ -901,7 +903,7 @@
             initLibrary();
         };
 
-        function openGrimoire(title) {
+        async function openGrimoire(title) {
             currentOpenAnime = title;
             if (!archiveData[title]) {
                 archiveData[title] = [{ q: `'${title}'에 대한 첫 번째 기록을 시작하십시오.`, a: "" }];
@@ -910,6 +912,23 @@
             currentQIndex = questions.length - 1;
             document.getElementById('book-title').innerText = title;
             updatePageContent();
+            
+            // 공유 상태 확인 및 버튼 텍스트 업데이트
+            const shareBtn = document.getElementById("share-book-btn");
+            if (shareBtn) {
+                try {
+                    const existingRecord = await getBookSharedRecord(title);
+                    if (existingRecord) {
+                        shareBtn.textContent = "📚 공유 취소";
+                    } else {
+                        shareBtn.textContent = "📚 다른 사람한테 보여주기";
+                    }
+                } catch (err) {
+                    // 에러가 나도 기본 텍스트로 설정
+                    shareBtn.textContent = "📚 다른 사람한테 보여주기";
+                }
+            }
+            
             document.getElementById('book-modal').style.display = 'flex';
         }
 
@@ -1326,6 +1345,160 @@
         const DESC_MAX_LEN = 400;
         let kakaoSDKReady = false;
 
+        // ========== Vercel KV: 공유 기록 저장 ==========
+        async function saveSharedRecordToKV(title, type, data, shareMethod) {
+            try {
+                const res = await fetch(window.location.origin + "/api/shared-records", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ title, type, data, shareMethod }),
+                });
+                if (!res.ok) {
+                    const error = await res.json().catch(() => ({ error: "Unknown error" }));
+                    console.warn("[공유 기록 저장 실패]", error);
+                    return false;
+                }
+                return true;
+            } catch (err) {
+                console.warn("[공유 기록 저장 실패]", err);
+                return false;
+            }
+        }
+
+        // 공유 기록 조회 (특정 작품의 "book" 타입 기록 찾기)
+        async function getBookSharedRecord(title) {
+            try {
+                const res = await fetch(window.location.origin + `/api/shared-records?title=${encodeURIComponent(title)}`);
+                if (!res.ok) {
+                    return null;
+                }
+                const result = await res.json();
+                const records = result.records || [];
+                // "book" 타입의 가장 최근 기록 찾기
+                const bookRecord = records
+                    .filter(r => r.type === "book")
+                    .sort((a, b) => new Date(b.sharedAt) - new Date(a.sharedAt))[0];
+                return bookRecord || null;
+            } catch (err) {
+                console.warn("[공유 기록 조회 실패]", err);
+                return null;
+            }
+        }
+
+        // 공유 기록 삭제
+        async function deleteSharedRecordFromKV(title, recordId) {
+            try {
+                const res = await fetch(window.location.origin + "/api/shared-records", {
+                    method: "DELETE",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ title, recordId }),
+                });
+                if (!res.ok) {
+                    const error = await res.json().catch(() => ({ error: "Unknown error" }));
+                    console.warn("[공유 기록 삭제 실패]", error);
+                    return false;
+                }
+                return true;
+            } catch (err) {
+                console.warn("[공유 기록 삭제 실패]", err);
+                return false;
+            }
+        }
+
+        // ========== 책 전체 공유 함수 (토글 방식) ==========
+        async function shareBookToKV() {
+            // 1. 현재 책 확인
+            if (!currentOpenAnime) {
+                alert("공유할 책이 없습니다.");
+                return;
+            }
+            
+            const shareBtn = document.getElementById("share-book-btn");
+            if (shareBtn) {
+                shareBtn.disabled = true;
+            }
+            
+            try {
+                // 2. 이미 공유되어 있는지 확인
+                const existingRecord = await getBookSharedRecord(currentOpenAnime);
+                
+                if (existingRecord) {
+                    // 이미 공유되어 있으면 삭제 (공유 취소)
+                    if (shareBtn) {
+                        shareBtn.textContent = "취소 중...";
+                    }
+                    
+                    const success = await deleteSharedRecordFromKV(currentOpenAnime, existingRecord.id);
+                    
+                    if (success) {
+                        alert("공유가 취소되었습니다.");
+                        if (shareBtn) {
+                            shareBtn.textContent = "📚 다른 사람한테 보여주기";
+                        }
+                    } else {
+                        alert("공유 취소에 실패했습니다.");
+                        if (shareBtn) {
+                            shareBtn.textContent = "📚 공유 취소";
+                        }
+                    }
+                } else {
+                    // 공유되어 있지 않으면 추가
+                    // 질문+답변 수집
+                    const questions = getQuestionsForTitle(currentOpenAnime);
+                    if (!questions || questions.length === 0) {
+                        alert("공유할 질문이 없습니다.");
+                        if (shareBtn) {
+                            shareBtn.disabled = false;
+                        }
+                        return;
+                    }
+                    
+                    // 줄거리 가져오기
+                    const overview = getOverviewForTitle(currentOpenAnime);
+                    
+                    // 데이터 구성
+                    const bookData = {
+                        title: currentOpenAnime,
+                        questions: questions,
+                        overview: overview
+                    };
+                    
+                    if (shareBtn) {
+                        shareBtn.textContent = "저장 중...";
+                    }
+                    
+                    // KV에 저장
+                    const success = await saveSharedRecordToKV(
+                        currentOpenAnime,
+                        "book",
+                        bookData,
+                        "kv"
+                    );
+                    
+                    if (success) {
+                        alert("책이 공유 기록에 저장되었습니다! 📚");
+                        if (shareBtn) {
+                            shareBtn.textContent = "📚 공유 취소";
+                        }
+                    } else {
+                        alert("공유 기록 저장에 실패했습니다.");
+                        if (shareBtn) {
+                            shareBtn.textContent = "📚 다른 사람한테 보여주기";
+                        }
+                    }
+                }
+            } catch (err) {
+                alert("공유 중 오류가 발생했습니다: " + err.message);
+                if (shareBtn) {
+                    shareBtn.textContent = "📚 다른 사람한테 보여주기";
+                }
+            } finally {
+                if (shareBtn) {
+                    shareBtn.disabled = false;
+                }
+            }
+        }
+
         function tryInitKakao() {
             if (window.Kakao && kakaoJsKey && !window.Kakao.isInitialized()) {
                 window.Kakao.init(kakaoJsKey);
@@ -1450,13 +1623,13 @@
             const shareBtn = document.getElementById("share-qa-btn");
             if (shareBtn) {
                 shareBtn.disabled = true;
-                shareBtn.textContent = "📜 이미지 생성 중...";
+                shareBtn.textContent = "이미지 생성 중...";
             }
 
             const pageLeft = document.querySelector("#book-modal .page-left");
             if (!pageLeft) {
                 alert("공유할 질문 영역을 찾을 수 없습니다.");
-                if (shareBtn) { shareBtn.disabled = false; shareBtn.textContent = "📜 이미지로 공유"; }
+                if (shareBtn) { shareBtn.disabled = false; shareBtn.textContent = "💬 카카오톡 공유"; }
                 return;
             }
 
@@ -1526,15 +1699,25 @@
                         link: { mobileWebUrl: linkUrl, webUrl: linkUrl },
                     }],
                 });
+                
+                // 공유 기록 저장 (공유 창이 열리면 성공으로 간주)
+                saveSharedRecordToKV(currentOpenAnime, "qa", { q, a }, "image").catch(() => {
+                    // 실패해도 공유는 계속 진행
+                });
+
                 if (shareResult && typeof shareResult.then === "function") {
-                    shareResult.catch(function (err) {
-                        const errMsg = err?.msg || err?.message || String(err);
-                        if (errMsg.includes("domain") || errMsg.includes("401") || err?.code === -401) {
-                            alert("도메인 미등록 에러입니다. 카카오 개발자 콘솔에서 사이트 도메인(" + window.location.origin + ")을 등록해 주세요.");
-                        } else {
-                            alert("공유 실패: " + errMsg);
-                        }
-                    });
+                    shareResult
+                        .then(function () {
+                            // 공유 성공 시 기록 저장 (이미 위에서 저장했지만, 성공 확인 후 재시도 가능)
+                        })
+                        .catch(function (err) {
+                            const errMsg = err?.msg || err?.message || String(err);
+                            if (errMsg.includes("domain") || errMsg.includes("401") || err?.code === -401) {
+                                alert("도메인 미등록 에러입니다. 카카오 개발자 콘솔에서 사이트 도메인(" + window.location.origin + ")을 등록해 주세요.");
+                            } else {
+                                alert("공유 실패: " + errMsg);
+                            }
+                        });
                 }
             } catch (err) {
                 pageLeft.style.overflowY = origOverflow;
@@ -1543,7 +1726,7 @@
             } finally {
                 if (shareBtn) {
                     shareBtn.disabled = false;
-                    shareBtn.textContent = "📜 이미지로 공유";
+                    shareBtn.textContent = "💬 카카오톡 공유";
                 }
             }
         }
@@ -1581,7 +1764,13 @@
                 return;
             }
             try {
+                const q = (item.q || "").trim();
                 window.Kakao.Share.sendScrap({ requestUrl: shareUrl });
+                
+                // 공유 기록 저장 (공유 창이 열리면 성공으로 간주)
+                saveSharedRecordToKV(currentOpenAnime, "qa", { q, a }, "link").catch(() => {
+                    // 실패해도 공유는 계속 진행
+                });
             } catch (err) {
                 alert("공유 중 오류: " + (err?.message || String(err)));
             }

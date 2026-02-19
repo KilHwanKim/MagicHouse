@@ -3,6 +3,7 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import { readFileSync } from "fs";
+import { kv } from "@vercel/kv";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -249,6 +250,135 @@ app.post("/api/generate-questions", async (req, res) => {
   }
 });
 
+// ========== Vercel KV: 공유 기록 저장/조회/삭제 ==========
+const KV_PREFIX = "shared_records:";
+
+// 공유 기록 추가
+app.post("/api/shared-records", async (req, res) => {
+  try {
+    const { title, type, data, shareMethod } = req.body;
+    
+    if (!title || !type || !data) {
+      return res.status(400).json({ error: "title, type, data are required" });
+    }
+
+    const recordId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+    const record = {
+      id: recordId,
+      type: type,
+      sharedAt: new Date().toISOString(),
+      data: data,
+      shareMethod: shareMethod || "image",
+      preview: type === "book" 
+        ? `${title} - ${data.questions?.length || 0}개 질문`
+        : (data.q || "").slice(0, 50) + (data.q?.length > 50 ? "…" : "")
+    };
+
+    // 작품별로 리스트에 추가
+    const key = `${KV_PREFIX}${title}`;
+    const existing = await kv.get(key);
+    const records = Array.isArray(existing) ? existing : [];
+    records.push(record);
+    
+    // 최근 50개만 보관
+    const trimmed = records.slice(-50);
+    await kv.set(key, trimmed);
+
+    res.json({ success: true, recordId });
+  } catch (err) {
+    console.error("KV 저장 실패:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 공유 기록 조회 (작품별 또는 전체)
+app.get("/api/shared-records", async (req, res) => {
+  try {
+    const { title } = req.query;
+    
+    if (title) {
+      // 특정 작품의 기록만 조회
+      const key = `${KV_PREFIX}${title}`;
+      const records = await kv.get(key);
+      res.json({ records: Array.isArray(records) ? records : [] });
+    } else {
+      // 모든 작품의 기록 조회
+      const keys = await kv.keys(`${KV_PREFIX}*`);
+      const allRecords = [];
+      
+      for (const key of keys) {
+        const records = await kv.get(key);
+        if (Array.isArray(records)) {
+          const titleFromKey = key.replace(KV_PREFIX, "");
+          records.forEach((record) => {
+            allRecords.push({ ...record, title: titleFromKey });
+          });
+        }
+      }
+      
+      // 시간순 정렬
+      allRecords.sort((a, b) => new Date(b.sharedAt) - new Date(a.sharedAt));
+      res.json({ records: allRecords });
+    }
+  } catch (err) {
+    console.error("KV 조회 실패:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 공유 기록 삭제
+app.delete("/api/shared-records", async (req, res) => {
+  try {
+    const { title, recordId } = req.body;
+    
+    if (!title || !recordId) {
+      return res.status(400).json({ error: "title and recordId are required" });
+    }
+
+    const key = `${KV_PREFIX}${title}`;
+    const records = await kv.get(key);
+    
+    if (!Array.isArray(records)) {
+      return res.json({ success: false, message: "No records found" });
+    }
+
+    const filtered = records.filter((r) => r.id !== recordId);
+    
+    if (filtered.length === 0) {
+      // 기록이 없으면 키 삭제
+      await kv.del(key);
+    } else {
+      await kv.set(key, filtered);
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("KV 삭제 실패:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 작품 목록 조회 (공유 기록이 있는 작품들)
+app.get("/api/shared-records/titles", async (req, res) => {
+  try {
+    const keys = await kv.keys(`${KV_PREFIX}*`);
+    const titles = [];
+    
+    for (const key of keys) {
+      const records = await kv.get(key);
+      if (Array.isArray(records) && records.length > 0) {
+        const title = key.replace(KV_PREFIX, "");
+        titles.push({ title, count: records.length });
+      }
+    }
+    
+    res.json({ titles });
+  } catch (err) {
+    console.error("KV 작품 목록 조회 실패:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Vercel 서버리스에서는 listen 하지 않음
 if (typeof process !== "undefined" && process.env.VERCEL !== "1") {
   app.listen(PORT, () => {
@@ -257,7 +387,9 @@ if (typeof process !== "undefined" && process.env.VERCEL !== "1") {
     console.log(`질문 생성 테스트: http://localhost:${PORT}/tests/generate-questions.html`);
     console.log(`로컬 스토리지 테스트: http://localhost:${PORT}/tests/local-storage.html`);
     console.log(`광고 테스트: http://localhost:${PORT}/tests/ad.html`);
-  console.log(`카카오 공유 테스트: http://localhost:${PORT}/tests/kakao-share.html`);
+    console.log(`카카오 공유 테스트: http://localhost:${PORT}/tests/kakao-share.html`);
+    console.log(`공유 기록 테스트: http://localhost:${PORT}/tests/shared-records.html`);
+    console.log(`Vercel KV 공유 기록 테스트: http://localhost:${PORT}/tests/vercel-kv-shared-records.html`);
   });
 }
 

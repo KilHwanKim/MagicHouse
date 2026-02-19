@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vercel KV 공유 기록 테스트 — Arcane Archive</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-stone-900 text-stone-100 min-h-screen p-6">
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-2xl font-bold mb-2">Vercel KV 공유 기록 테스트</h1>
+    <p class="text-stone-400 text-sm mb-6">
+      Vercel KV를 사용한 공유 기록 저장·조회·삭제 기능을 테스트합니다.
+      <br/>
+      <span class="text-amber-400">⚠️ Vercel KV 환경 변수(KV_URL, KV_REST_API_URL, KV_REST_API_TOKEN)가 설정되어 있어야 합니다.</span>
+    </p>
+
+    <div class="mb-4 p-4 rounded-lg bg-amber-950/40 border border-amber-800/50 text-stone-300 text-sm">
+      <h2 class="text-amber-500/90 font-semibold mb-2">환경 설정</h2>
+      <p class="mb-2">Vercel KV를 사용하려면 다음 환경 변수가 필요합니다:</p>
+      <ul class="list-disc list-inside space-y-1 text-xs text-stone-400">
+        <li><code class="bg-stone-800 px-1 rounded">KV_URL</code> 또는</li>
+        <li><code class="bg-stone-800 px-1 rounded">KV_REST_API_URL</code> + <code class="bg-stone-800 px-1 rounded">KV_REST_API_TOKEN</code></li>
+      </ul>
+      <p class="mt-2 text-xs text-stone-500">로컬 테스트: <code class="bg-stone-800 px-1 rounded">.env</code> 파일에 설정하세요.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-6">
+      <!-- 공유 기록 추가 -->
+      <div class="p-4 rounded-lg bg-stone-800/50 border border-stone-700">
+        <h2 class="text-lg font-semibold text-amber-600/90 mb-4">공유 기록 추가</h2>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-stone-400 text-sm mb-1">작품명</label>
+            <input type="text" id="recordTitle" placeholder="예: 장송의 프리렌"
+              class="w-full rounded-lg bg-stone-800 border border-stone-600 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+          </div>
+          <div>
+            <label class="block text-stone-400 text-sm mb-1">공유 타입</label>
+            <select id="recordType" class="w-full rounded-lg bg-stone-800 border border-stone-600 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500">
+              <option value="qa">Q&A (질문+답변)</option>
+              <option value="book">책 전체</option>
+            </select>
+          </div>
+          <div id="qaFields">
+            <div>
+              <label class="block text-stone-400 text-sm mb-1">질문</label>
+              <input type="text" id="recordQ" placeholder="예: 가장 인상 깊었던 장면은?"
+                class="w-full rounded-lg bg-stone-800 border border-stone-600 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+            </div>
+            <div>
+              <label class="block text-stone-400 text-sm mb-1">답변</label>
+              <textarea id="recordA" rows="2" placeholder="예: 힘멜과의 10년..."
+                class="w-full rounded-lg bg-stone-800 border border-stone-600 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"></textarea>
+            </div>
+          </div>
+          <div id="bookFields" style="display: none;">
+            <div>
+              <label class="block text-stone-400 text-sm mb-1">질문 개수</label>
+              <input type="number" id="recordQCount" value="5" min="1" max="50"
+                class="w-full rounded-lg bg-stone-800 border border-stone-600 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+            </div>
+            <div>
+              <label class="block text-stone-400 text-sm mb-1">줄거리 (선택)</label>
+              <textarea id="recordOverview" rows="2" placeholder="작품 줄거리..."
+                class="w-full rounded-lg bg-stone-800 border border-stone-600 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"></textarea>
+            </div>
+          </div>
+          <div>
+            <label class="block text-stone-400 text-sm mb-1">공유 방식</label>
+            <select id="recordMethod" class="w-full rounded-lg bg-stone-800 border border-stone-600 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500">
+              <option value="image">이미지</option>
+              <option value="link">링크</option>
+            </select>
+          </div>
+          <button id="btnAddRecord" class="w-full py-3 rounded-lg bg-amber-600 hover:bg-amber-500 font-medium transition-colors">
+            공유 기록 추가 (KV)
+          </button>
+        </div>
+      </div>
+
+      <!-- 필터 및 관리 -->
+      <div class="p-4 rounded-lg bg-stone-800/50 border border-stone-700">
+        <h2 class="text-lg font-semibold text-amber-600/90 mb-4">필터 및 관리</h2>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-stone-400 text-sm mb-1">작품 필터</label>
+            <select id="filterTitle" class="w-full rounded-lg bg-stone-800 border border-stone-600 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500">
+              <option value="">모든 작품</option>
+            </select>
+          </div>
+          <div class="flex gap-2">
+            <button id="btnRefresh" class="flex-1 py-2 px-4 rounded-lg bg-stone-700 hover:bg-stone-600 font-medium transition-colors text-sm">
+              목록 새로고침
+            </button>
+            <button id="btnClear" class="flex-1 py-2 px-4 rounded-lg bg-red-900/50 hover:bg-red-900 font-medium transition-colors text-sm text-red-200">
+              선택 작품 삭제
+            </button>
+          </div>
+          <div class="pt-2 border-t border-stone-700">
+            <div class="text-stone-400 text-xs">
+              <div>총 기록: <span id="totalCount" class="text-amber-400 font-bold">0</span>개</div>
+              <div>작품 수: <span id="titleCount" class="text-amber-400 font-bold">0</span>개</div>
+              <div>KV 연결 상태: <span id="kvStatus" class="text-amber-400 font-bold">확인 중...</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="status" class="mb-4 text-stone-400 text-sm min-h-[1.5rem]"></div>
+
+    <h2 class="text-lg font-semibold text-stone-300 mb-2">공유 기록 목록</h2>
+    <div id="recordList" class="space-y-2 mb-8"></div>
+
+    <h2 class="text-lg font-semibold text-stone-300 mb-2">API 응답 (최근)</h2>
+    <pre id="apiResponse" class="p-4 rounded-lg bg-stone-950 border border-stone-700 text-xs text-stone-400 overflow-x-auto min-h-[80px] max-h-96 overflow-y-auto"></pre>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+
+    function escapeHtml(s) {
+      const div = document.createElement("div");
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function setStatus(msg, isError = false) {
+      const el = document.getElementById("status");
+      el.textContent = msg;
+      el.className = "mb-4 text-sm min-h-[1.5rem] " + (isError ? "text-red-400" : "text-stone-400");
+    }
+
+    function logApiResponse(data) {
+      const el = document.getElementById("apiResponse");
+      el.textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function addSharedRecord(title, type, data, shareMethod) {
+      try {
+        const res = await fetch(`${API_BASE}/api/shared-records`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, type, data, shareMethod }),
+        });
+        const result = await res.json();
+        logApiResponse(result);
+        if (!res.ok) {
+          throw new Error(result.error || "저장 실패");
+        }
+        return result.recordId;
+      } catch (err) {
+        throw new Error("KV 저장 실패: " + err.message);
+      }
+    }
+
+    async function getSharedRecords(title) {
+      try {
+        const url = title 
+          ? `${API_BASE}/api/shared-records?title=${encodeURIComponent(title)}`
+          : `${API_BASE}/api/shared-records`;
+        const res = await fetch(url);
+        const result = await res.json();
+        logApiResponse(result);
+        if (!res.ok) {
+          throw new Error(result.error || "조회 실패");
+        }
+        return result.records || [];
+      } catch (err) {
+        throw new Error("KV 조회 실패: " + err.message);
+      }
+    }
+
+    async function deleteSharedRecord(title, recordId) {
+      try {
+        const res = await fetch(`${API_BASE}/api/shared-records`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, recordId }),
+        });
+        const result = await res.json();
+        logApiResponse(result);
+        if (!res.ok) {
+          throw new Error(result.error || "삭제 실패");
+        }
+        return result.success;
+      } catch (err) {
+        throw new Error("KV 삭제 실패: " + err.message);
+      }
+    }
+
+    async function getTitles() {
+      try {
+        const res = await fetch(`${API_BASE}/api/shared-records/titles`);
+        const result = await res.json();
+        if (!res.ok) {
+          throw new Error(result.error || "작품 목록 조회 실패");
+        }
+        return result.titles || [];
+      } catch (err) {
+        console.warn("작품 목록 조회 실패:", err);
+        return [];
+      }
+    }
+
+    async function updateFilter() {
+      const filter = document.getElementById("filterTitle");
+      try {
+        const titles = await getTitles();
+        filter.innerHTML = '<option value="">모든 작품</option>';
+        titles.forEach((item) => {
+          const option = document.createElement("option");
+          option.value = item.title;
+          option.textContent = `${item.title} (${item.count}개)`;
+          filter.appendChild(option);
+        });
+      } catch (err) {
+        filter.innerHTML = '<option value="">모든 작품</option>';
+      }
+    }
+
+    async function render() {
+      const filter = document.getElementById("filterTitle");
+      const selectedTitle = filter ? filter.value : "";
+      
+      try {
+        const records = await getSharedRecords(selectedTitle);
+        const allRecords = await getSharedRecords();
+        const titles = await getTitles();
+
+        // 통계 업데이트
+        document.getElementById("totalCount").textContent = allRecords.length;
+        document.getElementById("titleCount").textContent = titles.length;
+        document.getElementById("kvStatus").textContent = "연결됨 ✓";
+        document.getElementById("kvStatus").className = "text-green-400 font-bold";
+
+        // 목록 렌더링
+        const listEl = document.getElementById("recordList");
+        listEl.innerHTML = "";
+        
+        if (records.length === 0) {
+          listEl.innerHTML = '<div class="text-stone-400 text-center py-8">공유 기록이 없습니다.</div>';
+          return;
+        }
+
+        records.forEach((record) => {
+          const date = new Date(record.sharedAt);
+          const dateStr = date.toLocaleDateString("ko-KR", { 
+            year: "numeric", 
+            month: "short", 
+            day: "numeric", 
+            hour: "2-digit", 
+            minute: "2-digit" 
+          });
+          const methodIcon = record.shareMethod === "image" ? "📜" : "🔗";
+          const typeText = record.type === "book" ? "책 전체" : "Q&A";
+          const title = record.title || "(제목 없음)";
+
+          const div = document.createElement("div");
+          div.className = "p-4 rounded-lg bg-stone-800/80 border border-stone-700 hover:border-amber-600/50 transition-colors";
+          div.innerHTML = `
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex-1">
+                <div class="font-medium text-amber-600/90 mb-1">${escapeHtml(title)}</div>
+                <div class="text-stone-400 text-sm mb-2">${methodIcon} ${typeText} · ${dateStr}</div>
+                <div class="text-stone-300 text-xs">${escapeHtml(record.preview || "")}</div>
+                ${record.type === "book" ? `
+                  <div class="mt-2 text-stone-500 text-xs">
+                    질문 ${record.data.questions?.length || 0}개
+                    ${record.data.overview ? `· 줄거리: ${escapeHtml(record.data.overview.slice(0, 50))}${record.data.overview.length > 50 ? "…" : ""}` : ""}
+                  </div>
+                ` : `
+                  <div class="mt-2 text-stone-500 text-xs">
+                    Q. ${escapeHtml((record.data.q || "").slice(0, 60))}${(record.data.q || "").length > 60 ? "…" : ""}
+                  </div>
+                  <div class="text-stone-500 text-xs">
+                    A. ${escapeHtml((record.data.a || "").slice(0, 60))}${(record.data.a || "").length > 60 ? "…" : ""}
+                  </div>
+                `}
+              </div>
+              <button onclick="deleteRecord('${escapeHtml(title)}', '${record.id}')" 
+                class="text-red-400 hover:text-red-300 text-xl px-2 flex-shrink-0" 
+                title="삭제">×</button>
+            </div>
+          `;
+          listEl.appendChild(div);
+        });
+      } catch (err) {
+        document.getElementById("kvStatus").textContent = "연결 실패 ✗";
+        document.getElementById("kvStatus").className = "text-red-400 font-bold";
+        setStatus("KV 조회 실패: " + err.message, true);
+        const listEl = document.getElementById("recordList");
+        listEl.innerHTML = '<div class="text-red-400 text-center py-8">KV 연결 실패: ' + escapeHtml(err.message) + '</div>';
+      }
+    }
+
+    async function deleteRecord(title, recordId) {
+      if (!confirm("이 공유 기록을 삭제하시겠습니까?")) return;
+      try {
+        await deleteSharedRecord(title, recordId);
+        setStatus("공유 기록이 삭제되었습니다.");
+        await updateFilter();
+        await render();
+      } catch (err) {
+        setStatus("삭제 실패: " + err.message, true);
+      }
+    }
+
+    // 타입 변경 시 필드 표시/숨김
+    document.getElementById("recordType").addEventListener("change", function() {
+      const type = this.value;
+      document.getElementById("qaFields").style.display = type === "qa" ? "block" : "none";
+      document.getElementById("bookFields").style.display = type === "book" ? "block" : "none";
+    });
+
+    // 공유 기록 추가
+    document.getElementById("btnAddRecord").addEventListener("click", async function() {
+      const title = document.getElementById("recordTitle").value.trim();
+      const type = document.getElementById("recordType").value;
+      const method = document.getElementById("recordMethod").value;
+
+      if (!title) {
+        setStatus("작품명을 입력하세요.", true);
+        return;
+      }
+
+      let data;
+      if (type === "qa") {
+        const q = document.getElementById("recordQ").value.trim();
+        const a = document.getElementById("recordA").value.trim();
+        if (!q) {
+          setStatus("질문을 입력하세요.", true);
+          return;
+        }
+        data = { q, a };
+      } else {
+        const qCount = parseInt(document.getElementById("recordQCount").value) || 5;
+        const overview = document.getElementById("recordOverview").value.trim();
+        const questions = Array.from({ length: qCount }, (_, i) => ({
+          q: `샘플 질문 ${i + 1}`,
+          a: `샘플 답변 ${i + 1}`,
+          options: i < 2 ? ["선택지1", "선택지2", "선택지3"] : undefined
+        }));
+        data = {
+          title: title,
+          questions: questions,
+          overview: overview
+        };
+      }
+
+      try {
+        this.disabled = true;
+        this.textContent = "저장 중...";
+        const recordId = await addSharedRecord(title, type, data, method);
+        setStatus(`공유 기록이 추가되었습니다. (ID: ${recordId.slice(0, 8)}…)`);
+        
+        // 입력 필드 초기화
+        document.getElementById("recordTitle").value = "";
+        document.getElementById("recordQ").value = "";
+        document.getElementById("recordA").value = "";
+        document.getElementById("recordOverview").value = "";
+        
+        await updateFilter();
+        await render();
+      } catch (err) {
+        setStatus("저장 실패: " + err.message, true);
+      } finally {
+        this.disabled = false;
+        this.textContent = "공유 기록 추가 (KV)";
+      }
+    });
+
+    // 필터 변경
+    document.getElementById("filterTitle").addEventListener("change", render);
+
+    // 새로고침
+    document.getElementById("btnRefresh").addEventListener("click", async function() {
+      await updateFilter();
+      await render();
+      setStatus("목록을 새로고침했습니다.");
+    });
+
+    // 선택 작품 삭제
+    document.getElementById("btnClear").addEventListener("click", async function() {
+      const filter = document.getElementById("filterTitle");
+      const selectedTitle = filter.value;
+      if (!selectedTitle) {
+        setStatus("삭제할 작품을 선택하세요.", true);
+        return;
+      }
+      if (!confirm(`"${selectedTitle}"의 모든 공유 기록을 삭제할까요?`)) return;
+      
+      try {
+        const records = await getSharedRecords(selectedTitle);
+        let deleted = 0;
+        for (const record of records) {
+          await deleteSharedRecord(selectedTitle, record.id);
+          deleted++;
+        }
+        setStatus(`${deleted}개의 기록이 삭제되었습니다.`);
+        await updateFilter();
+        await render();
+      } catch (err) {
+        setStatus("삭제 실패: " + err.message, true);
+      }
+    });
+
+    // 초기화
+    (async function() {
+      await updateFilter();
+      await render();
+      setStatus("Vercel KV 공유 기록을 추가하거나 필터를 사용하여 조회하세요.");
+    })();
+  </script>
+</body>
+</html>
