@@ -23,6 +23,143 @@ app.get("/api/config", (req, res) => {
   });
 });
 
+// 카카오 로그인: 인가 코드를 액세스 토큰으로 교환
+app.post("/api/kakao/token", async (req, res) => {
+  try {
+    const { code, redirectUri } = req.body;
+    
+    if (!code) {
+      return res.status(400).json({ error: "code is required" });
+    }
+    
+    const kakaoRestKey = process.env.KAKAO_REST_API_KEY;
+    if (!kakaoRestKey) {
+      return res.status(500).json({ error: "KAKAO_REST_API_KEY is not configured" });
+    }
+    
+    // 클라이언트 시크릿 (선택사항, 활성화된 경우 필요)
+    const kakaoClientSecret = process.env.KAKAO_CLIENT_SECRET;
+    
+    // Redirect URI 정확히 일치해야 함 (슬래시 없이)
+    const finalRedirectUri = redirectUri || `${req.protocol}://${req.get("host")}`;
+    
+    console.log("[카카오 토큰 교환] 요청 정보:", {
+      redirectUri: finalRedirectUri,
+      hasCode: !!code,
+      restKeyPrefix: kakaoRestKey.substring(0, 8) + "...",
+      restKeyLength: kakaoRestKey.length,
+      codeLength: code.length,
+      hasClientSecret: !!kakaoClientSecret
+    });
+    
+    // 카카오 토큰 교환 API 호출
+    const requestParams = {
+      grant_type: "authorization_code",
+      client_id: kakaoRestKey,
+      redirect_uri: finalRedirectUri,
+      code: code,
+    };
+    
+    // 클라이언트 시크릿이 있으면 추가 (카카오 개발자 콘솔에서 활성화된 경우)
+    if (kakaoClientSecret) {
+      requestParams.client_secret = kakaoClientSecret;
+    }
+    
+    const requestBody = new URLSearchParams(requestParams);
+    
+    console.log("[카카오 토큰 교환] 요청 본문:", {
+      grant_type: "authorization_code",
+      client_id: kakaoRestKey.substring(0, 8) + "...",
+      redirect_uri: finalRedirectUri,
+      code: code.substring(0, 10) + "..."
+    });
+    
+    const tokenResponse = await fetch("https://kauth.kakao.com/oauth/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: requestBody,
+    });
+    
+    if (!tokenResponse.ok) {
+      const errorData = await tokenResponse.json().catch(() => ({}));
+      console.error("카카오 토큰 교환 실패:", errorData);
+      console.error("사용된 Redirect URI:", finalRedirectUri);
+      console.error("REST API 키 확인 필요:", kakaoRestKey ? "설정됨" : "없음");
+      
+      // KOE010 에러인 경우 상세 안내
+      if (errorData.error_code === 'KOE010') {
+        return res.status(tokenResponse.status).json({ 
+          error: "invalid_client",
+          error_description: "REST API 키가 잘못되었거나 카카오 개발자 콘솔 설정을 확인해주세요.",
+          error_code: "KOE010",
+          details: {
+            message: "카카오 개발자 콘솔에서 다음을 확인하세요:",
+            checks: [
+              "1. 앱 설정 → 앱 키에서 REST API 키가 올바른지 확인",
+              "2. 카카오 로그인 → Redirect URI에 정확히 일치하는 URI가 등록되어 있는지 확인",
+              `3. 현재 사용된 Redirect URI: ${finalRedirectUri}`,
+              "4. 플랫폼 → Web 플랫폼이 등록되어 있는지 확인"
+            ]
+          }
+        });
+      }
+      
+      return res.status(tokenResponse.status).json({ 
+        error: "Failed to exchange token", 
+        details: errorData 
+      });
+    }
+    
+    const tokenData = await tokenResponse.json();
+    res.json({
+      access_token: tokenData.access_token,
+      refresh_token: tokenData.refresh_token,
+      expires_in: tokenData.expires_in,
+    });
+  } catch (err) {
+    console.error("카카오 토큰 교환 오류:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 카카오 사용자 정보 조회 (액세스 토큰 사용)
+app.get("/api/kakao/user", async (req, res) => {
+  try {
+    const accessToken = req.headers.authorization?.replace("Bearer ", "");
+    
+    if (!accessToken) {
+      return res.status(401).json({ error: "Access token is required" });
+    }
+    
+    // 카카오 사용자 정보 조회 API 호출
+    const userResponse = await fetch("https://kapi.kakao.com/v2/user/me", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    
+    if (!userResponse.ok) {
+      const errorData = await userResponse.json().catch(() => ({}));
+      console.error("카카오 사용자 정보 조회 실패:", errorData);
+      return res.status(userResponse.status).json({ 
+        error: "Failed to get user info", 
+        details: errorData 
+      });
+    }
+    
+    const userData = await userResponse.json();
+    res.json({
+      id: userData.id,
+      // 필요한 경우 다른 정보도 포함 가능
+    });
+  } catch (err) {
+    console.error("카카오 사용자 정보 조회 오류:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 async function correctQueryWithLLM(openaiKey, systemPrompt, userQuery) {
   const r = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -256,15 +393,20 @@ const KV_PREFIX = "shared_records:";
 // 공유 기록 추가
 app.post("/api/shared-records", async (req, res) => {
   try {
-    const { title, type, data, shareMethod } = req.body;
+    const { title, type, data, shareMethod, userId } = req.body;
     
     if (!title || !type || !data) {
       return res.status(400).json({ error: "title, type, data are required" });
+    }
+    
+    if (!userId) {
+      return res.status(400).json({ error: "userId is required" });
     }
 
     const recordId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
     const record = {
       id: recordId,
+      userId: userId,
       type: type,
       sharedAt: new Date().toISOString(),
       data: data,
@@ -329,10 +471,10 @@ app.get("/api/shared-records", async (req, res) => {
 // 공유 기록 삭제
 app.delete("/api/shared-records", async (req, res) => {
   try {
-    const { title, recordId } = req.body;
+    const { title, recordId, userId } = req.body;
     
-    if (!title || !recordId) {
-      return res.status(400).json({ error: "title and recordId are required" });
+    if (!title || !recordId || !userId) {
+      return res.status(400).json({ error: "title, recordId, and userId are required" });
     }
 
     const key = `${KV_PREFIX}${title}`;
@@ -342,7 +484,13 @@ app.delete("/api/shared-records", async (req, res) => {
       return res.json({ success: false, message: "No records found" });
     }
 
-    const filtered = records.filter((r) => r.id !== recordId);
+    // userId와 recordId가 모두 일치하는 기록만 삭제
+    const recordToDelete = records.find(r => r.id === recordId && r.userId === userId);
+    if (!recordToDelete) {
+      return res.status(403).json({ success: false, message: "Record not found or access denied" });
+    }
+
+    const filtered = records.filter((r) => !(r.id === recordId && r.userId === userId));
     
     if (filtered.length === 0) {
       // 기록이 없으면 키 삭제
