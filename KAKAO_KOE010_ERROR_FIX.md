@@ -18,11 +18,11 @@
 스크린샷에서 보이는 페이지는 **REST API 키 설정 페이지**입니다.
 
 1. 이 페이지에서 **"키 이름"** 옆에 있는 **REST API 키 값**을 확인하세요
-2. 현재 `.env` 파일에 설정된 값: `bec86a0152235484912ff8cc174fa8da`
+2. 현재 `.env` 파일에 설정된 값과 비교
 3. 카카오 개발자 콘솔에서 보이는 REST API 키와 **정확히 일치**하는지 확인
 
 **중요**: 
-- JavaScript 키 (`565745e8bea5623d9bb958af626f4cb4`)와 REST API 키는 **다릅니다**!
+- JavaScript 키와 REST API 키는 **다릅니다**!
 - 스크린샷에서 보이는 키 이름 "Default Rest API Key" 옆에 실제 키 값이 있을 것입니다
 - 그 값을 복사해서 `.env` 파일에 정확히 입력해야 합니다
 
@@ -68,8 +68,8 @@
 ## 일반적인 실수
 
 1. **JavaScript 키를 REST API 키로 사용**: 가장 흔한 실수!
-   - JavaScript 키: `565745e8bea5623d9bb958af626f4cb4`
-   - REST API 키: 다른 값이어야 함
+   - JavaScript 키: `KAKAO_JS_KEY`
+   - REST API 키: `KAKAO_REST_API_KEY`
 
 2. **REST API 키를 잘못 복사**: 공백이나 특수문자 포함
 

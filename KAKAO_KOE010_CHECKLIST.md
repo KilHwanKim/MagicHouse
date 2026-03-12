@@ -1,7 +1,7 @@
 # KOE010 에러 체크리스트
 
 ## 현재 상태
-- ✅ REST API 키 로드됨: `bec86a01...`
+- ✅ REST API 키 로드됨: `<redacted>`
 - ✅ Redirect URI 올바름: `http://localhost:3000`
 - ✅ 인가 코드 수신됨
 - ❌ 토큰 교환 실패: KOE010 (Bad client credentials)
@@ -12,14 +12,14 @@
 
 **중요**: JavaScript 키와 REST API 키가 **같은 앱**의 것이어야 합니다!
 
-- JavaScript 키: `565745e8bea5623d9bb958af626f4cb4`
-- REST API 키: `bec86a0152235484912ff8cc174fa8da`
+- JavaScript 키: `<same-app-javascript-key>`
+- REST API 키: `<same-app-rest-api-key>`
 
 **확인 방법**:
 1. 카카오 개발자 콘솔 → 내 애플리케이션
 2. JavaScript 키가 있는 앱 선택
 3. 그 앱의 REST API 키 확인
-4. REST API 키가 `bec86a0152235484912ff8cc174fa8da`와 일치하는지 확인
+4. REST API 키가 `.env`의 `KAKAO_REST_API_KEY`와 일치하는지 확인
 
 ### 2. 카카오 로그인 활성화 확인
 

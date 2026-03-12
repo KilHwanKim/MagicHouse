@@ -39,6 +39,27 @@
 
 ## 시작하기
 
+### 1. 환경변수 설정
+
+`.env.example`을 복사해 `.env`를 만들고 필요한 값을 채웁니다.
+
+- 필수: `TMDB_API_KEY`, `OPENAI_API_KEY`
+- 카카오 공유를 쓸 때: `KAKAO_JS_KEY`, `KAKAO_REST_API_KEY`
+- 공유 기록 저장을 쓸 때: `KV_REST_API_URL`, `KV_REST_API_TOKEN`
+
+### 2. 설치 및 실행
+
+```bash
+npm install
+npm start
+```
+
+### 3. 자동 테스트
+
+```bash
+npm test
+```
+
 1. 작품 검색: 상단의 "+" 버튼을 클릭하여 원하는 영화나 드라마를 검색합니다.
 2. 작품 선택: 검색 결과에서 원하는 작품을 선택하면 서재에 추가됩니다.
 3. 질문 생성: 책을 클릭하여 열고, "새 질문 연성" 버튼으로 AI가 생성한 질문을 받거나 직접 질문을 작성합니다.
@@ -52,6 +73,11 @@
 - **API**: TMDB API (영화/드라마 검색), OpenAI API (질문 생성)
 - **Storage**: LocalStorage (로컬 저장), Vercel KV (공유 기록)
 - **Deployment**: Vercel
+
+## 개발 메모
+
+- 민감한 요청/응답 로그는 기본적으로 비활성화되어 있습니다.
+- 디버그 로그가 필요하면 `.env`에 `DEBUG_LOGS=1`을 설정하세요.
 
 ## 프로젝트 배경
 

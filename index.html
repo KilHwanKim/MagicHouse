@@ -675,6 +675,14 @@
     <script>
         const apiKey = "";
         const API_BASE = window.location.origin;
+        const DEBUG_LOGS = new URLSearchParams(window.location.search).get("debug") === "1"
+            || localStorage.getItem("magic_house_debug") === "1";
+
+        function debugLog(...args) {
+            if (DEBUG_LOGS) {
+                console.log(...args);
+            }
+        }
         const IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
         
         const STORAGE_KEY = "arcane_archive";
@@ -1109,12 +1117,13 @@
                     existingQA: existingQA
                 };
 
-                // ========== 테스트용 로그 (운영 시 삭제 필요) ==========
-                console.log("=== Open API 호출 요청 ===");
-                console.log("URL:", `${API_BASE}/api/generate-questions`);
-                console.log("Request Body:", JSON.stringify(requestBody, null, 2));
-                console.log("=====================================");
-                // ========================================================
+                debugLog("=== Open API 호출 요청 ===");
+                debugLog("URL:", `${API_BASE}/api/generate-questions`);
+                debugLog("Request Body:", {
+                    title: requestBody.title,
+                    overviewLength: requestBody.overview.length,
+                    existingQaCount: requestBody.existingQA.length
+                });
 
                 const res = await fetch(`${API_BASE}/api/generate-questions`, {
                     method: "POST",
@@ -1123,18 +1132,14 @@
                 });
                 const data = await res.json();
 
-                // ========== 테스트용 로그 (운영 시 삭제 필요) ==========
-                console.log("=== Open API 호출 응답 ===");
-                console.log("Status:", res.status, res.statusText);
-                console.log("Response Data:", JSON.stringify(data, null, 2));
+                debugLog("=== Open API 호출 응답 ===");
+                debugLog("Status:", res.status, res.statusText);
                 if (data.questions) {
-                    console.log("생성된 질문 개수:", data.questions.length);
+                    debugLog("생성된 질문 개수:", data.questions.length);
                     data.questions.forEach((q, idx) => {
-                        console.log(`질문 ${idx + 1}:`, q);
+                        debugLog(`질문 ${idx + 1}:`, q);
                     });
                 }
-                console.log("=====================================");
-                // ========================================================
 
                 if (!res.ok) {
                     throw new Error(data.error || "질문 생성 실패");
@@ -1416,7 +1421,7 @@
             // 간단한 방법: 현재 페이지로 리다이렉트하고 URL에서 코드를 읽어 처리
             
             return new Promise((resolve, reject) => {
-                console.log('[카카오 로그인] authorize 호출...');
+                debugLog('[카카오 로그인] authorize 호출...');
                 
                 // 현재 URL을 redirectUri로 사용
                 const redirectUri = window.location.origin + window.location.pathname;
@@ -1429,7 +1434,7 @@
                     // 인가 코드가 있으면 서버에서 토큰으로 교환해야 하지만,
                     // 간단하게 하기 위해 authorize를 다시 호출하지 않고
                     // 사용자 정보를 가져오려고 시도
-                    console.log('[카카오 로그인] 인가 코드 발견:', code);
+                    debugLog('[카카오 로그인] 인가 코드 발견:', code);
                     // 실제로는 서버에서 토큰으로 교환해야 하지만, 
                     // 여기서는 authorize를 통해 자동으로 처리되도록 함
                     window.Kakao.Auth.authorize({
@@ -1529,7 +1534,7 @@
                     const newUrl = window.location.origin + window.location.pathname;
                     window.history.replaceState({}, document.title, newUrl);
                     
-                    console.log('[카카오 로그인] 성공, 사용자 ID:', kakaoUserId);
+                    debugLog('[카카오 로그인] 성공, 사용자 ID:', kakaoUserId);
                     return kakaoUserId;
                 } catch (err) {
                     console.error('[카카오 로그인] 토큰 교환 실패:', err);
@@ -1640,9 +1645,9 @@
         async function shareBookToKV() {
             // 0. 카카오 로그인 확인
             try {
-                console.log('[공유 시작] 카카오 로그인 확인 중...');
+                debugLog('[공유 시작] 카카오 로그인 확인 중...');
                 const userId = await ensureKakaoLogin();
-                console.log('[공유] 로그인 완료, userId:', userId, 'kakaoUserId:', kakaoUserId);
+                debugLog('[공유] 로그인 완료, userId:', userId, 'kakaoUserId:', kakaoUserId);
                 
                 if (!userId || !kakaoUserId) {
                     console.error('[공유 실패] userId 또는 kakaoUserId가 없습니다.');

@@ -9,6 +9,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3000;
 const TMDB_BASE = "https://api.themoviedb.org/3";
+const DEBUG_LOGS = process.env.DEBUG_LOGS === "1";
+
+function debugLog(...args) {
+  if (DEBUG_LOGS) {
+    console.log(...args);
+  }
+}
 
 app.use(express.json());
 
@@ -43,7 +50,7 @@ app.post("/api/kakao/token", async (req, res) => {
     // Redirect URI 정확히 일치해야 함 (슬래시 없이)
     const finalRedirectUri = redirectUri || `${req.protocol}://${req.get("host")}`;
     
-    console.log("[카카오 토큰 교환] 요청 정보:", {
+    debugLog("[카카오 토큰 교환] 요청 정보:", {
       redirectUri: finalRedirectUri,
       hasCode: !!code,
       restKeyPrefix: kakaoRestKey.substring(0, 8) + "...",
@@ -67,7 +74,7 @@ app.post("/api/kakao/token", async (req, res) => {
     
     const requestBody = new URLSearchParams(requestParams);
     
-    console.log("[카카오 토큰 교환] 요청 본문:", {
+    debugLog("[카카오 토큰 교환] 요청 본문:", {
       grant_type: "authorization_code",
       client_id: kakaoRestKey.substring(0, 8) + "...",
       redirect_uri: finalRedirectUri,
@@ -277,15 +284,6 @@ app.post("/api/generate-questions", async (req, res) => {
     userContent += `\n\n[기존 Q&A - 아래와 중복되지 않도록 하세요. 답변이 있는 경우, 그 답변을 바탕으로 꼬리질문(후속 질문)을 생성해도 됩니다]\n${qaBlock}`;
   }
 
-  // ========== 테스트용 로그 (운영 시 삭제 필요) ==========
-  console.log("=== OpenAI API 호출 시작 ===");
-  console.log("Request URL: https://api.openai.com/v1/chat/completions");
-  console.log("Model: gpt-4o");
-  console.log("\n[System Message]:");
-  console.log(systemContent);
-  console.log("\n[User Message]:");
-  console.log(userContent);
-  console.log("\n[Request Payload]:");
   const requestPayload = {
     model: "gpt-4o",
     messages: [
@@ -295,9 +293,15 @@ app.post("/api/generate-questions", async (req, res) => {
     temperature: 0.7,
     max_tokens: 1024,
   };
-  console.log(JSON.stringify(requestPayload, null, 2));
-  console.log("=====================================");
-  // ========================================================
+
+  debugLog("=== OpenAI API 호출 시작 ===");
+  debugLog("Request URL: https://api.openai.com/v1/chat/completions");
+  debugLog("Model:", requestPayload.model);
+  debugLog("Prompt sizes:", {
+    systemLength: systemContent.length,
+    userLength: userContent.length,
+    existingQaCount: qaList.length,
+  });
 
   try {
     const r = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -310,25 +314,16 @@ app.post("/api/generate-questions", async (req, res) => {
     });
 
     const data = await r.json();
-    
-    // ========== 테스트용 로그 (운영 시 삭제 필요) ==========
-    console.log("=== OpenAI API 응답 ===");
-    console.log("Status:", r.status, r.statusText);
-    console.log("Response Headers:", Object.fromEntries(r.headers.entries()));
-    console.log("\n[Response Data]:");
-    console.log(JSON.stringify(data, null, 2));
-    if (data.choices?.[0]?.message?.content) {
-      console.log("\n[Assistant Message]:");
-      console.log(data.choices[0].message.content);
-    }
+
+    debugLog("=== OpenAI API 응답 ===");
+    debugLog("Status:", r.status, r.statusText);
     if (data.usage) {
-      console.log("\n[Token Usage]:");
-      console.log(`  Prompt tokens: ${data.usage.prompt_tokens}`);
-      console.log(`  Completion tokens: ${data.usage.completion_tokens}`);
-      console.log(`  Total tokens: ${data.usage.total_tokens}`);
+      debugLog("Token Usage:", {
+        promptTokens: data.usage.prompt_tokens,
+        completionTokens: data.usage.completion_tokens,
+        totalTokens: data.usage.total_tokens,
+      });
     }
-    console.log("=====================================");
-    // ========================================================
 
     if (!r.ok) {
       return res.status(r.status).json({
