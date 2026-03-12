@@ -808,23 +808,144 @@
         
         const STORAGE_KEY = "arcane_archive";
         
-        // 초기 데이터 (빈 상태로 시작)
-        let archiveData = {}; // { title: [{ q, a }, ...] }
-        let workMetadata = {}; // { title: { overview: "" } } - 작품 메타데이터
+        // 초기 데이터 (workKey 기반)
+        let archiveData = {}; // { workKey: { title, questions: [{ q, a }] } }
+        let workMetadata = {}; // { workKey: { title, overview, mediaType, workId, workKey } }
         
         let currentOpenAnime = "";
+        let currentOpenWorkKey = "";
+
+        function createDefaultQuestion(title) {
+            return { q: `'${title}'에 대한 첫 번째 기록을 시작하십시오.`, a: "" };
+        }
+
+        function slugifyTitle(title) {
+            return encodeURIComponent((title || "").trim().toLowerCase());
+        }
+
+        function buildWorkKey({ workId, mediaType, title }) {
+            if (workId && mediaType) {
+                return `${mediaType}:${workId}`;
+            }
+            return `legacy:${slugifyTitle(title || "untitled")}`;
+        }
+
+        function normalizeStoredWorkRecord(stored, title, workKey) {
+            if (Array.isArray(stored)) {
+                return {
+                    workKey,
+                    title,
+                    questions: stored,
+                };
+            }
+
+            if (stored && typeof stored === "object") {
+                return {
+                    workKey,
+                    title: stored.title || title,
+                    questions: Array.isArray(stored.questions) ? stored.questions : [],
+                };
+            }
+
+            return {
+                workKey,
+                title,
+                questions: [createDefaultQuestion(title)],
+            };
+        }
+
+        function migrateStoredData(data) {
+            const nextArchiveData = {};
+            const nextWorkMetadata = {};
+            const storedArchiveData = data && typeof data.archiveData === "object" ? data.archiveData : {};
+            const storedWorkMetadata = data && typeof data.workMetadata === "object" ? data.workMetadata : {};
+
+            Object.entries(storedArchiveData).forEach(([legacyKey, storedRecord]) => {
+                const storedMeta = storedWorkMetadata[legacyKey] || {};
+                const title = storedMeta.title || legacyKey;
+                const mediaType = storedMeta.mediaType || storedMeta.type || "";
+                const workId = storedMeta.workId || storedMeta.tmdbId || "";
+                const workKey = storedMeta.workKey || buildWorkKey({ workId, mediaType, title });
+
+                nextArchiveData[workKey] = normalizeStoredWorkRecord(storedRecord, title, workKey);
+                nextWorkMetadata[workKey] = {
+                    title,
+                    overview: storedMeta.overview || "",
+                    mediaType: mediaType || "unknown",
+                    workId: workId ? String(workId) : "",
+                    workKey,
+                    posterPath: storedMeta.posterPath || "",
+                    releaseDate: storedMeta.releaseDate || "",
+                    legacyTitle: legacyKey,
+                };
+            });
+
+            return { archiveData: nextArchiveData, workMetadata: nextWorkMetadata };
+        }
+
+        function getWorkKeyByTitle(title) {
+            const match = Object.keys(workMetadata).find((workKey) => {
+                const metadata = workMetadata[workKey];
+                return metadata?.title === title || metadata?.legacyTitle === title;
+            });
+            if (match) return match;
+
+            return Object.keys(archiveData).find((workKey) => archiveData[workKey]?.title === title) || "";
+        }
+
+        function resolveWorkKey(reference) {
+            if (!reference) return "";
+            if (archiveData[reference] || workMetadata[reference]) return reference;
+            if (reference === currentOpenAnime && currentOpenWorkKey) return currentOpenWorkKey;
+            return getWorkKeyByTitle(reference);
+        }
+
+        function getWorkRecord(reference) {
+            const workKey = resolveWorkKey(reference);
+            if (!workKey) return null;
+            return archiveData[workKey] || null;
+        }
+
+        function getWorkMetadata(reference) {
+            const workKey = resolveWorkKey(reference);
+            if (!workKey) return null;
+            return workMetadata[workKey] || null;
+        }
+
+        function getTitleForWork(reference) {
+            return getWorkMetadata(reference)?.title || getWorkRecord(reference)?.title || reference || "";
+        }
+
+        function ensureWorkEntry(workKey, metadata = {}) {
+            const existingTitle = metadata.title || getTitleForWork(workKey) || "제목 없음";
+            if (!archiveData[workKey]) {
+                archiveData[workKey] = {
+                    workKey,
+                    title: existingTitle,
+                    questions: [createDefaultQuestion(existingTitle)],
+                };
+            }
+
+            workMetadata[workKey] = {
+                title: existingTitle,
+                overview: metadata.overview || workMetadata[workKey]?.overview || "",
+                mediaType: metadata.mediaType || workMetadata[workKey]?.mediaType || "unknown",
+                workId: metadata.workId || workMetadata[workKey]?.workId || "",
+                workKey,
+                posterPath: metadata.posterPath || workMetadata[workKey]?.posterPath || "",
+                releaseDate: metadata.releaseDate || workMetadata[workKey]?.releaseDate || "",
+                legacyTitle: workMetadata[workKey]?.legacyTitle || existingTitle,
+            };
+        }
 
         function loadFromLocalStorage() {
             try {
                 const raw = localStorage.getItem(STORAGE_KEY);
                 if (raw) {
                     const data = JSON.parse(raw);
-                    if (data && typeof data.archiveData === "object") {
-                        archiveData = data.archiveData || {};
-                    }
-                    if (data && typeof data.workMetadata === "object") {
-                        workMetadata = data.workMetadata || {};
-                    }
+                    const migrated = migrateStoredData(data);
+                    archiveData = migrated.archiveData;
+                    workMetadata = migrated.workMetadata;
                 }
             } catch (e) {
                 console.warn("로컬 스토리지 로드 실패:", e);
@@ -835,7 +956,8 @@
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify({
                     archiveData,
-                    workMetadata
+                    workMetadata,
+                    storageVersion: 2,
                 }));
             } catch (e) {
                 console.warn("로컬 스토리지 저장 실패:", e);
@@ -866,43 +988,37 @@
 
         // 초기 서재 채우기 (왼쪽 위부터 순서대로)
         function initLibrary() {
-            const titles = Object.keys(archiveData);
-            titles.forEach((title) => {
-                addBookToNextAvailableShelf(title);
+            const workKeys = Object.keys(archiveData);
+            workKeys.forEach((workKey) => {
+                addBookToNextAvailableShelf(workKey);
             });
             updateVolumeCount();
         }
 
-        // archiveData 구조 호환성 함수: 기존 배열 형태를 새로운 구조로 변환
-        function getQuestionsForTitle(title) {
-            if (!archiveData[title]) return [];
-            // 기존 배열 형태인지 확인
-            if (Array.isArray(archiveData[title])) {
-                return archiveData[title];
-            }
-            // 새로운 구조인 경우
-            return archiveData[title].questions || [];
+        function getQuestionsForTitle(titleOrWorkKey) {
+            const workRecord = getWorkRecord(titleOrWorkKey);
+            return workRecord?.questions || [];
         }
 
-        function getOverviewForTitle(title) {
-            return workMetadata[title]?.overview || "";
+        function getOverviewForTitle(titleOrWorkKey) {
+            return getWorkMetadata(titleOrWorkKey)?.overview || "";
         }
 
         // 질문 수에 따른 책 두께 계산 (기본 60px + 질문당 6px)
         const BASE_BOOK_WIDTH = 60;
         const QUESTION_WIDTH_INCREMENT = 6;
-        function getBookWidthForTitle(title) {
-            const count = getQuestionsForTitle(title).length;
+        function getBookWidthForTitle(titleOrWorkKey) {
+            const count = getQuestionsForTitle(titleOrWorkKey).length;
             return BASE_BOOK_WIDTH + count * QUESTION_WIDTH_INCREMENT;
         }
 
         // 해당 제목의 책 DOM 요소 찾아 두께 업데이트
-        function updateBookWidthForTitle(title) {
+        function updateBookWidthForTitle(titleOrWorkKey) {
+            const workKey = resolveWorkKey(titleOrWorkKey);
             const books = document.querySelectorAll('.grimoire:not(.grimoire-add)');
             for (const book of books) {
-                const text = book.textContent?.trim() || '';
-                if (text === title) {
-                    book.style.width = `${getBookWidthForTitle(title)}px`;
+                if (book.dataset.workKey === workKey) {
+                    book.style.width = `${getBookWidthForTitle(workKey)}px`;
                     break;
                 }
             }
@@ -945,8 +1061,8 @@
         }
 
         // 다음 사용 가능한 선반에 책 추가하는 함수
-        function addBookToNextAvailableShelf(title) {
-            const bookWidth = getBookWidthForTitle(title);
+        function addBookToNextAvailableShelf(workKey) {
+            const bookWidth = getBookWidthForTitle(workKey);
             
             // 플러스 버튼이 있는 선반 찾기
             let addButton = document.querySelector('.grimoire-add');
@@ -954,7 +1070,7 @@
             
             if (!currentShelf) {
                 // 플러스 버튼이 없으면 shelf-1에 추가
-                createGrimoireElement(title, 'shelf-1');
+                createGrimoireElement(workKey, 'shelf-1');
                 return;
             }
 
@@ -968,33 +1084,35 @@
                 addButton = document.querySelector('.grimoire-add');
                 currentShelf = addButton ? addButton.closest('.books-wrapper') : null;
                 if (currentShelf) {
-                    createGrimoireElement(title, currentShelf.id);
+                    createGrimoireElement(workKey, currentShelf.id);
                 } else {
                     // 더 이상 선반이 없으면 shelf-1에 추가
-                    createGrimoireElement(title, 'shelf-1');
+                    createGrimoireElement(workKey, 'shelf-1');
                 }
             } else {
                 // 공간이 있으면 현재 선반에 추가
-                createGrimoireElement(title, shelfId);
+                createGrimoireElement(workKey, shelfId);
             }
         }
 
-        function createGrimoireElement(title, shelfId) {
+        function createGrimoireElement(workKey, shelfId) {
             const shelf = document.getElementById(shelfId);
             const addButton = shelf.querySelector('.grimoire-add');
+            const title = getTitleForWork(workKey);
             
             const colors = ['#4e1a1a', '#1a2b4a', '#1b3b2a', '#5d4037', '#281b3d', '#1c1c1c', '#3e2723', '#2c3e50'];
             const randomColor = colors[Math.floor(Math.random() * colors.length)];
             const fixedHeight = 190; // 고정 높이 사용
-            const fixedWidth = getBookWidthForTitle(title); // 질문 수에 따른 두께
+            const fixedWidth = getBookWidthForTitle(workKey); // 질문 수에 따른 두께
 
             const newBook = document.createElement('div');
             newBook.className = 'grimoire book-appear';
+            newBook.dataset.workKey = workKey;
             newBook.style.backgroundColor = randomColor;
             newBook.style.height = `${fixedHeight}px`;
             newBook.style.width = `${fixedWidth}px`;
             newBook.innerHTML = `<div class="grimoire-decoration"></div>${title}`;
-            newBook.onclick = () => openGrimoire(title);
+            newBook.onclick = () => openGrimoireByWorkKey(workKey);
 
             // 선반이 가득 찼는지 확인 (플러스 버튼이 없는 경우)
             if (!addButton) {
@@ -1038,12 +1156,12 @@
             initLibrary();
         };
 
-        async function openGrimoire(title) {
+        async function openGrimoireByWorkKey(workKey) {
+            const title = getTitleForWork(workKey);
+            currentOpenWorkKey = workKey;
             currentOpenAnime = title;
-            if (!archiveData[title]) {
-                archiveData[title] = [{ q: `'${title}'에 대한 첫 번째 기록을 시작하십시오.`, a: "" }];
-            }
-            const questions = getQuestionsForTitle(title);
+            ensureWorkEntry(workKey, { title });
+            const questions = getQuestionsForTitle(workKey);
             currentQIndex = questions.length - 1;
             document.getElementById('book-title').innerText = title;
             updatePageContent();
@@ -1067,6 +1185,12 @@
             document.getElementById('book-modal').style.display = 'flex';
         }
 
+        async function openGrimoire(title) {
+            const workKey = resolveWorkKey(title);
+            if (!workKey) return;
+            await openGrimoireByWorkKey(workKey);
+        }
+
         function saveAndCloseGrimoire() {
             saveCurrentAnswer();
             saveToLocalStorage();
@@ -1087,6 +1211,7 @@
                 saveToLocalStorage();
             }
             document.getElementById('book-modal').style.display = 'none';
+            currentOpenWorkKey = "";
         }
 
         function updatePageContent() {
@@ -1451,23 +1576,29 @@
             if (!item) return;
             
             const title = item.title || item.name;
+            const workKey = buildWorkKey({
+                workId: item.id ? String(item.id) : "",
+                mediaType: item.media_type || "unknown",
+                title
+            });
             
             // 이미 존재하는 작품인지 확인
-            if (archiveData[title]) {
+            if (archiveData[workKey]) {
                 setTmdbStatus("이미 추가된 작품입니다.", true);
                 return;
             }
 
-            // archiveData에 추가
-            archiveData[title] = [{ q: `'${title}'에 대한 첫 번째 기록을 시작하십시오.`, a: "" }];
-            
-            // 작품 메타데이터에 overview 저장
-            if (item.overview) {
-                workMetadata[title] = { overview: item.overview };
-            }
+            ensureWorkEntry(workKey, {
+                title,
+                overview: item.overview || "",
+                mediaType: item.media_type || "unknown",
+                workId: item.id ? String(item.id) : "",
+                posterPath: item.poster_path || "",
+                releaseDate: item.release_date || item.first_air_date || "",
+            });
 
             // 플러스 버튼이 있는 선반에 책 추가 (왼쪽 위부터 순서대로)
-            addBookToNextAvailableShelf(title);
+            addBookToNextAvailableShelf(workKey);
             updateVolumeCount();
             saveToLocalStorage();
             

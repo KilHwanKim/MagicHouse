@@ -63,3 +63,38 @@ test("share page explains when shared records are unavailable", async ({ page })
   await expect(page.locator("#tab-by-title")).toBeDisabled();
   await expect(page.locator("#tab-my-books")).toBeDisabled();
 });
+
+test("migrates legacy local storage records into the current library", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "arcane_archive",
+      JSON.stringify({
+        archiveData: {
+          "Legacy Title": [
+            {
+              q: "기존 질문",
+              a: "기존 답변",
+            },
+          ],
+        },
+        workMetadata: {
+          "Legacy Title": {
+            overview: "예전 방식으로 저장된 줄거리",
+          },
+        },
+      }),
+    );
+  });
+
+  await page.goto(baseUrl);
+
+  const legacyBook = page.locator(".grimoire:not(.grimoire-add)").filter({
+    hasText: "Legacy Title",
+  });
+  await expect(legacyBook).toBeVisible();
+
+  await legacyBook.click();
+  await expect(page.locator("#book-title")).toHaveText("Legacy Title");
+  await expect(page.locator("#q-text")).toHaveText("기존 질문");
+  await expect(page.locator("#a-input")).toHaveValue("기존 답변");
+});
