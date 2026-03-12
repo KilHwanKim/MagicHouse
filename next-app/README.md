@@ -18,6 +18,7 @@ Open `http://localhost:3000` to see the scaffold.
 ## Available routes
 
 - `/` – migration landing page
+- `/auth` – 이메일/Google 중심 인증 이관 페이지
 - `/migration` – phased migration checklist
 - `/lab` – TMDB 검색 / AI 질문 생성 실험실
 - `/share` – shared library placeholder

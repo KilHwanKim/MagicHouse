@@ -15,6 +15,11 @@ export type FeatureConfig = {
     cta: string;
     url: string;
   } | null;
+  auth: {
+    email: boolean;
+    google: boolean;
+    kakao: boolean;
+  };
   features: FeatureFlags;
 };
 
@@ -43,6 +48,14 @@ export function getFeatureConfig(): FeatureConfig {
             url: promotionUrl,
           }
         : null,
+    auth: {
+      email: process.env.AUTH_EMAIL_ENABLED === "1",
+      google: Boolean(
+        process.env.GOOGLE_CLIENT_ID?.trim() &&
+          process.env.GOOGLE_CLIENT_SECRET?.trim(),
+      ),
+      kakao: Boolean(kakaoJsKey && kakaoRestKey),
+    },
     features: {
       tmdbSearch: Boolean(process.env.TMDB_API_KEY),
       aiQuestions: Boolean(process.env.OPENAI_API_KEY),

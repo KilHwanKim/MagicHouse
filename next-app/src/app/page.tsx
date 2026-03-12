@@ -66,6 +66,12 @@ export default function Home() {
             >
               API 실험실
             </Link>
+            <Link
+              href="/auth"
+              className="rounded-full border border-fuchsia-300/30 bg-fuchsia-400/15 px-5 py-3 text-sm font-semibold text-fuchsia-50 transition hover:bg-fuchsia-400/20"
+            >
+              인증 이관
+            </Link>
           </div>
         </div>
       </section>
