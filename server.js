@@ -22,10 +22,13 @@ function buildFeatureConfig() {
   const hasKakaoRestKey = Boolean((process.env.KAKAO_REST_API_KEY || "").trim());
   const hasKvConfig = Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
   const promotion = buildPromotionConfig();
+  const feedbackFormUrl = (process.env.FEEDBACK_FORM_URL || "https://docs.google.com/forms/d/e/1FAIpQLSdh7hu20jRqcRAAGs0klcdO0mKaGnw2MDd7GmVI3I4uiJBb-A/viewform").trim();
 
   return {
     kakaoJsKey: process.env.KAKAO_JS_KEY || "",
     promotion,
+    feedbackFormUrl,
+    metricsEnabled: Boolean(process.env.METRICS_WEBHOOK_URL),
     features: {
       tmdbSearch: Boolean(process.env.TMDB_API_KEY),
       aiQuestions: Boolean(process.env.OPENAI_API_KEY),
@@ -54,6 +57,28 @@ function buildPromotionConfig() {
     cta,
     url,
   };
+}
+
+async function forwardMetricEvent(payload) {
+  const webhookUrl = (process.env.METRICS_WEBHOOK_URL || "").trim();
+  if (!webhookUrl) {
+    return { accepted: false, forwarded: false };
+  }
+
+  const response = await fetch(webhookUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const message = await response.text().catch(() => response.statusText);
+    throw new Error(`Metrics webhook failed: ${response.status} ${message}`);
+  }
+
+  return { accepted: true, forwarded: true };
 }
 
 function hasSharedRecordsConfig() {
@@ -122,6 +147,32 @@ app.use("/tests", express.static(path.join(__dirname, "tests")));
 // 카카오 공유용 설정 (클라이언트에서 사용)
 app.get("/api/config", (req, res) => {
   res.json(buildFeatureConfig());
+});
+
+app.post("/api/metrics", async (req, res) => {
+  const { event, page, anonymousId, properties } = req.body || {};
+
+  if (!event || typeof event !== "string") {
+    return res.status(400).json({ error: "event is required" });
+  }
+
+  const payload = {
+    event,
+    page: typeof page === "string" ? page : "",
+    anonymousId: typeof anonymousId === "string" ? anonymousId : "",
+    properties: properties && typeof properties === "object" ? properties : {},
+    occurredAt: new Date().toISOString(),
+  };
+
+  try {
+    const result = await forwardMetricEvent(payload);
+    res.status(result.forwarded ? 200 : 202).json(result);
+  } catch (error) {
+    console.error("Metrics forwarding failed:", error);
+    res.status(502).json({
+      error: error instanceof Error ? error.message : "Metrics forwarding failed",
+    });
+  }
 });
 
 // 카카오 로그인: 인가 코드를 액세스 토큰으로 교환

@@ -10,6 +10,8 @@ for (const key of [
   "KAKAO_CLIENT_SECRET",
   "KV_REST_API_URL",
   "KV_REST_API_TOKEN",
+  "FEEDBACK_FORM_URL",
+  "METRICS_WEBHOOK_URL",
 ]) {
   delete process.env[key];
 }
@@ -52,6 +54,9 @@ test("serves config defaults", async () => {
   assert.equal(response.status, 200);
   assert.deepEqual(body, {
     kakaoJsKey: "",
+    feedbackFormUrl:
+      "https://docs.google.com/forms/d/e/1FAIpQLSdh7hu20jRqcRAAGs0klcdO0mKaGnw2MDd7GmVI3I4uiJBb-A/viewform",
+    metricsEnabled: false,
     promotion: null,
     features: {
       tmdbSearch: false,
@@ -122,6 +127,36 @@ test("reports unavailable shared-records storage on read", async () => {
   assert.equal(response.status, 503);
   assert.equal(body.error, "Shared records storage is not configured");
   assert.equal(body.code, "SHARED_RECORDS_UNAVAILABLE");
+});
+
+test("validates metrics payload", async () => {
+  const response = await fetch(`${baseUrl}/api/metrics`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(body.error, "event is required");
+});
+
+test("accepts metrics without webhook", async () => {
+  const response = await fetch(`${baseUrl}/api/metrics`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      event: "test_event",
+      page: "/",
+      anonymousId: "anon_test",
+      properties: { source: "smoke-test" },
+    }),
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 202);
+  assert.equal(body.accepted, false);
+  assert.equal(body.forwarded, false);
 });
 
 test("reports unavailable shared-records storage on titles", async () => {

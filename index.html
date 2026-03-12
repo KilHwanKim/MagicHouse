@@ -588,7 +588,7 @@
             </div>
             <div class="flex gap-2">
                 <a id="shared-library-link" href="/share.html" class="gold-btn text-[10px] tracking-widest px-4 py-2 no-underline" title="다른 사람들이 공유한 책 보기">📚 공유된 서고</a>
-                <a href="https://docs.google.com/forms/d/e/1FAIpQLSdh7hu20jRqcRAAGs0klcdO0mKaGnw2MDd7GmVI3I4uiJBb-A/viewform" target="_blank" rel="noopener noreferrer" class="gold-btn text-[10px] tracking-widest px-4 py-2 no-underline" title="개선사항·에러 피드백 보내기">💬 피드백</a>
+                <a id="feedback-link" href="https://docs.google.com/forms/d/e/1FAIpQLSdh7hu20jRqcRAAGs0klcdO0mKaGnw2MDd7GmVI3I4uiJBb-A/viewform" target="_blank" rel="noopener noreferrer" class="gold-btn text-[10px] tracking-widest px-4 py-2 no-underline" title="개선사항·에러 피드백 보내기">💬 피드백</a>
                 <button id="site-share-btn" type="button" onclick="shareSiteFeed()" class="gold-btn text-[10px] tracking-widest px-4 py-2" title="사이트를 카카오톡으로 공유">📤 사이트 공유</button>
             </div>
         </div>
@@ -730,6 +730,8 @@
             sharedRecords: true
         };
         let promotionBanner = null;
+        let feedbackFormUrl = "https://docs.google.com/forms/d/e/1FAIpQLSdh7hu20jRqcRAAGs0klcdO0mKaGnw2MDd7GmVI3I4uiJBb-A/viewform";
+        let metricsEnabled = false;
 
         function debugLog(...args) {
             if (DEBUG_LOGS) {
@@ -803,6 +805,50 @@
             cta.textContent = promotionBanner.cta || "바로가기";
             cta.href = promotionBanner.url || "#";
             banner.classList.add("visible");
+        }
+
+        function getAnonymousId() {
+            const existing = localStorage.getItem("magic_house_anonymous_id");
+            if (existing) return existing;
+
+            const nextId = "anon_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+            localStorage.setItem("magic_house_anonymous_id", nextId);
+            return nextId;
+        }
+
+        function trackMetric(eventName, properties = {}) {
+            const payload = {
+                event: eventName,
+                page: window.location.pathname,
+                anonymousId: getAnonymousId(),
+                properties,
+            };
+            const body = JSON.stringify(payload);
+
+            if (navigator.sendBeacon) {
+                try {
+                    const blob = new Blob([body], { type: "application/json" });
+                    navigator.sendBeacon(window.location.origin + "/api/metrics", blob);
+                    return;
+                } catch (_) {}
+            }
+
+            fetch(window.location.origin + "/api/metrics", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body,
+                keepalive: true,
+            }).catch(() => {});
+        }
+
+        function applyFeedbackConfig(url) {
+            feedbackFormUrl = (url || feedbackFormUrl || "").trim() || feedbackFormUrl;
+            const link = document.getElementById("feedback-link");
+            if (!link) return;
+            link.href = feedbackFormUrl;
+            link.onclick = function () {
+                trackMetric("feedback_link_clicked", { href: feedbackFormUrl });
+            };
         }
         const IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
         
@@ -1471,6 +1517,11 @@
                 updatePageContent();
                 updateBookWidthForTitle(currentOpenAnime);
                 saveToLocalStorage();
+                trackMetric("ai_questions_generated", {
+                    workKey: currentOpenWorkKey || resolveWorkKey(currentOpenAnime),
+                    title: currentOpenAnime,
+                    count: newQuestions.length,
+                });
             } catch (error) {
                 console.error("질문 생성 오류:", error);
                 alert("질문 생성 중 오류가 발생했습니다: " + error.message);
@@ -1600,6 +1651,7 @@
                 setTmdbStatus(`총 ${data.total_results ?? list.length}건 (페이지 ${data.page ?? 1})`);
                 currentSearchResults = list;
                 resultsEl.innerHTML = list.map((item, index) => renderSearchResult(item, index)).join("");
+                trackMetric("tmdb_search_completed", { query: q, results: list.length });
             } catch (err) {
                 setTmdbStatus("요청 실패: " + err.message, true);
             } finally {
@@ -1649,6 +1701,12 @@
             addBookToNextAvailableShelf(workKey);
             updateVolumeCount();
             saveToLocalStorage();
+            trackMetric("work_added", {
+                workKey,
+                title,
+                mediaType: item.media_type || "unknown",
+                workId: item.id ? String(item.id) : "",
+            });
             
             // 모달 닫기
             closeTmdbSearchModal();
@@ -2301,6 +2359,10 @@
                 }, "image").catch(() => {
                     // 실패해도 공유는 계속 진행
                 });
+                trackMetric("qa_image_share_requested", {
+                    workKey: currentOpenWorkKey || resolveWorkKey(currentOpenAnime),
+                    title: currentOpenAnime,
+                });
 
                 if (shareResult && typeof shareResult.then === "function") {
                     shareResult
@@ -2366,6 +2428,11 @@
             try {
                 const q = (item.q || "").trim();
                 window.Kakao.Share.sendScrap({ requestUrl: shareUrl });
+                trackMetric("qa_link_share_requested", {
+                    workKey: currentOpenWorkKey || resolveWorkKey(currentOpenAnime),
+                    title: currentOpenAnime,
+                    slug: getShareMetadata(currentOpenWorkKey || currentOpenAnime).slug,
+                });
                 
                 // 공유 기록 저장 (공유 창이 열리면 성공으로 간주)
             saveSharedRecordToKV(currentOpenAnime, "qa", {
@@ -2388,8 +2455,10 @@
                 })
                 .then(function (data) {
                     kakaoJsKey = (data.kakaoJsKey || "").trim();
+                    metricsEnabled = !!data.metricsEnabled;
                     applyFeatureAvailability(data.features || {});
                     renderPromotionBanner(data.promotion);
+                    applyFeedbackConfig(data.feedbackFormUrl);
                     tryInitKakao();
                     if (window.Kakao && window.Kakao.Share) kakaoSDKReady = true;
                     
@@ -2403,6 +2472,13 @@
                         // 토큰 유효성 확인
                         checkKakaoLogin();
                     }
+
+                    trackMetric("app_loaded", {
+                        tmdbSearch: featureAvailability.tmdbSearch,
+                        aiQuestions: featureAvailability.aiQuestions,
+                        sharedRecords: featureAvailability.sharedRecords,
+                        metricsEnabled,
+                    });
                 })
                 .catch(function (e) {
                     console.warn("[카카오] 설정 로드 실패:", e);

@@ -25,6 +25,7 @@ Open `http://localhost:3000` to see the scaffold.
 - `/api/config` – feature availability JSON for server/client UI gating
 - `/api/tmdb/search` – Next Route Handler 기반 TMDB 검색
 - `/api/generate-questions` – Next Route Handler 기반 AI 질문 생성
+- `/api/metrics` – 운영 지표 웹훅 전달 엔드포인트
 
 ## Validation
 

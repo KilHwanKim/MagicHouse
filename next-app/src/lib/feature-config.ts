@@ -8,6 +8,8 @@ export type FeatureFlags = {
 
 export type FeatureConfig = {
   kakaoJsKey: string;
+  feedbackFormUrl: string;
+  metricsEnabled: boolean;
   promotion: {
     label: string;
     title: string;
@@ -31,9 +33,14 @@ export function getFeatureConfig(): FeatureConfig {
   const promotionBody = process.env.AD_BANNER_BODY?.trim() ?? "";
   const promotionCta = process.env.AD_BANNER_CTA?.trim() ?? "";
   const promotionUrl = process.env.AD_BANNER_URL?.trim() ?? "";
+  const feedbackFormUrl =
+    process.env.FEEDBACK_FORM_URL?.trim() ||
+    "https://docs.google.com/forms/d/e/1FAIpQLSdh7hu20jRqcRAAGs0klcdO0mKaGnw2MDd7GmVI3I4uiJBb-A/viewform";
 
   return {
     kakaoJsKey,
+    feedbackFormUrl,
+    metricsEnabled: Boolean(process.env.METRICS_WEBHOOK_URL?.trim()),
     promotion:
       promotionEnabled &&
       promotionTitle &&

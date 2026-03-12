@@ -130,6 +130,20 @@ export default function Home() {
             `KAKAO_JS_KEY`는 공유 UI, `KAKAO_REST_API_KEY`는 로그인, `KV_REST_API_URL`과
             `KV_REST_API_TOKEN`은 공유 서고를 켜는 기준으로 사용됩니다.
           </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <StatusChip
+              enabled={config.metricsEnabled}
+              label={config.metricsEnabled ? "운영 지표 웹훅 준비됨" : "운영 지표 웹훅 미설정"}
+            />
+            <a
+              href={config.feedbackFormUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center rounded-full border border-white/15 bg-white/8 px-4 py-2 text-xs font-semibold text-white transition hover:bg-white/12"
+            >
+              피드백 폼 열기
+            </a>
+          </div>
         </SectionCard>
       </div>
 

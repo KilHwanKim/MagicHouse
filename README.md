@@ -47,6 +47,7 @@
 - 카카오 공유를 쓸 때: `KAKAO_JS_KEY`, `KAKAO_REST_API_KEY`
 - 공유 기록 저장을 쓸 때: `KV_REST_API_URL`, `KV_REST_API_TOKEN`
 - 직접 만든 광고 배너를 노출하려면: `AD_BANNER_*` 값 입력
+- 피드백 링크/운영 지표를 쓰려면: `FEEDBACK_FORM_URL`, `METRICS_WEBHOOK_URL`
 
 ### 2. 설치 및 실행
 

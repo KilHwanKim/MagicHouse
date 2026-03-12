@@ -558,6 +558,7 @@
         let currentRecord = null; // 현재 모달에 표시 중인 책
         let currentQIndex = 0;
         let requestedSlug = "";
+        let metricsEnabled = false;
         let featureAvailability = {
             sharedRecords: true,
             kakaoLogin: true
@@ -595,6 +596,40 @@
 
         function showSharedRecordsUnavailable() {
             showEmpty('공유 저장소가 아직 설정되지 않았습니다.<br><br>관리자가 KV 또는 Redis를 연결하면 공유된 서고를 볼 수 있습니다.');
+        }
+
+        function getAnonymousId() {
+            const existing = localStorage.getItem("magic_house_anonymous_id");
+            if (existing) return existing;
+
+            const nextId = "anon_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+            localStorage.setItem("magic_house_anonymous_id", nextId);
+            return nextId;
+        }
+
+        function trackMetric(eventName, properties = {}) {
+            const payload = {
+                event: eventName,
+                page: window.location.pathname,
+                anonymousId: getAnonymousId(),
+                properties,
+            };
+            const body = JSON.stringify(payload);
+
+            if (navigator.sendBeacon) {
+                try {
+                    const blob = new Blob([body], { type: "application/json" });
+                    navigator.sendBeacon(window.location.origin + "/api/metrics", blob);
+                    return;
+                } catch (_) {}
+            }
+
+            fetch(window.location.origin + "/api/metrics", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body,
+                keepalive: true,
+            }).catch(() => {});
         }
 
         function escapeJsString(text) {
@@ -740,6 +775,10 @@
             document.getElementById('book-title').innerText = bookData.title || record.title || '제목 없음';
             updateSharedBookContent();
             document.getElementById('book-modal').style.display = 'flex';
+            trackMetric('shared_book_opened', {
+                title: bookData.title || record.title || '제목 없음',
+                slug: record.slug || requestedSlug || '',
+            });
         }
 
         // 공유된 책 모달 내용 업데이트 (보기 전용)
@@ -842,6 +881,7 @@
             }
 
             currentTab = tab;
+            trackMetric('shared_library_tab_switched', { tab });
             
             // 탭 버튼 활성화
             document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
@@ -1055,11 +1095,17 @@
                 })
                 .then(function (data) {
                     applyFeatureAvailability(data.features || {});
+                    metricsEnabled = !!data.metricsEnabled;
                     checkKakaoLogin();
                     if (!featureAvailability.sharedRecords) {
                         showSharedRecordsUnavailable();
                         return;
                     }
+                    trackMetric('shared_library_loaded', {
+                        requestedSlug,
+                        sharedRecords: featureAvailability.sharedRecords,
+                        metricsEnabled,
+                    });
                     if (requestedSlug) {
                         selectTitleBySlug(requestedSlug);
                         return;
