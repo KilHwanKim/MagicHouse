@@ -98,3 +98,58 @@ test("migrates legacy local storage records into the current library", async ({ 
   await expect(page.locator("#q-text")).toHaveText("기존 질문");
   await expect(page.locator("#a-input")).toHaveValue("기존 답변");
 });
+
+test("opens shared book from slug-based link", async ({ page }) => {
+  await page.route("**/api/config", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        kakaoJsKey: "",
+        promotion: null,
+        features: {
+          tmdbSearch: false,
+          aiQuestions: false,
+          kakaoShare: false,
+          kakaoLogin: false,
+          sharedRecords: true,
+        },
+      }),
+    });
+  });
+
+  await page.route("**/api/shared-records?slug=legacy-title--movie--42", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        title: "Legacy Title",
+        slug: "legacy-title--movie--42",
+        records: [
+          {
+            id: "record-1",
+            type: "book",
+            title: "Legacy Title",
+            slug: "legacy-title--movie--42",
+            data: {
+              title: "Legacy Title",
+              questions: [
+                { q: "첫 질문", a: "첫 답변" },
+                { q: "두 번째 질문", a: "두 번째 답변" },
+              ],
+            },
+          },
+        ],
+      }),
+    });
+  });
+
+  await page.goto(
+    `${baseUrl}/share.html?slug=legacy-title--movie--42&q=${encodeURIComponent("두 번째 질문")}&a=${encodeURIComponent("두 번째 답변")}`,
+  );
+
+  await expect(page.locator("#book-modal")).toBeVisible();
+  await expect(page.locator("#book-title")).toHaveText("Legacy Title");
+  await expect(page.locator("#q-text")).toHaveText("두 번째 질문");
+  await expect(page.locator("#a-input")).toHaveValue("두 번째 답변");
+});

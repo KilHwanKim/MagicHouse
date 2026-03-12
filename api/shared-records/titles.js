@@ -6,6 +6,27 @@ function hasSharedRecordsConfig() {
   return Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 }
 
+function slugifySegment(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9가-힣]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-{2,}/g, "-");
+}
+
+function buildRecordSlug(title, sampleRecord) {
+  const mediaType = sampleRecord?.data?.mediaType || sampleRecord?.data?.type || "";
+  const workId = sampleRecord?.data?.workId || "";
+  const titleSlug = slugifySegment(title) || "record";
+
+  if (mediaType && workId) {
+    return `${titleSlug}--${slugifySegment(mediaType)}--${workId}`;
+  }
+
+  return titleSlug;
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -33,7 +54,7 @@ export default async function handler(req, res) {
       const records = await kv.get(key);
       if (Array.isArray(records) && records.length > 0) {
         const title = key.replace(KV_PREFIX, "");
-        titles.push({ title, count: records.length });
+        titles.push({ title, count: records.length, slug: buildRecordSlug(title, records[0]) });
       }
     }
     

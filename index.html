@@ -823,11 +823,28 @@
             return encodeURIComponent((title || "").trim().toLowerCase());
         }
 
+        function slugifySegment(value) {
+            return String(value || "")
+                .trim()
+                .toLowerCase()
+                .replace(/[^a-z0-9가-힣]+/g, "-")
+                .replace(/^-+|-+$/g, "")
+                .replace(/-{2,}/g, "-");
+        }
+
         function buildWorkKey({ workId, mediaType, title }) {
             if (workId && mediaType) {
                 return `${mediaType}:${workId}`;
             }
             return `legacy:${slugifyTitle(title || "untitled")}`;
+        }
+
+        function buildShareSlug({ title, mediaType, workId }) {
+            const titleSlug = slugifySegment(title) || "record";
+            if (mediaType && workId) {
+                return `${titleSlug}--${slugifySegment(mediaType)}--${workId}`;
+            }
+            return titleSlug;
         }
 
         function normalizeStoredWorkRecord(stored, title, workKey) {
@@ -914,6 +931,37 @@
 
         function getTitleForWork(reference) {
             return getWorkMetadata(reference)?.title || getWorkRecord(reference)?.title || reference || "";
+        }
+
+        function getShareMetadata(reference) {
+            const metadata = getWorkMetadata(reference) || {};
+            const title = metadata.title || getTitleForWork(reference);
+            return {
+                title,
+                workKey: metadata.workKey || resolveWorkKey(reference) || "",
+                mediaType: metadata.mediaType || "unknown",
+                workId: metadata.workId || "",
+                slug: buildShareSlug({
+                    title,
+                    mediaType: metadata.mediaType || "unknown",
+                    workId: metadata.workId || "",
+                }),
+            };
+        }
+
+        function buildSharedBookUrl(reference, extras = {}) {
+            const shareMeta = getShareMetadata(reference);
+            const params = new URLSearchParams({
+                slug: shareMeta.slug,
+            });
+
+            Object.entries(extras).forEach(([key, value]) => {
+                if (value) {
+                    params.set(key, value);
+                }
+            });
+
+            return `${window.location.origin}/share.html?${params.toString()}`;
         }
 
         function ensureWorkEntry(workKey, metadata = {}) {
@@ -1170,7 +1218,7 @@
             const shareBtn = document.getElementById("share-book-btn");
             if (shareBtn) {
                 try {
-                    const existingRecord = await getBookSharedRecord(title);
+                    const existingRecord = await getBookSharedRecord(workKey);
                     if (existingRecord) {
                         shareBtn.textContent = "📚 공유 취소";
                     } else {
@@ -1849,13 +1897,14 @@
         }
 
         // 공유 기록 조회 (특정 작품의 "book" 타입 기록 찾기)
-        async function getBookSharedRecord(title) {
+        async function getBookSharedRecord(reference) {
             if (!kakaoUserId) {
                 return null;
             }
             
             try {
-                const res = await fetch(window.location.origin + `/api/shared-records?title=${encodeURIComponent(title)}`);
+                const shareMeta = getShareMetadata(reference);
+                const res = await fetch(window.location.origin + `/api/shared-records?slug=${encodeURIComponent(shareMeta.slug)}`);
                 if (!res.ok) {
                     return null;
                 }
@@ -1945,7 +1994,7 @@
             
             try {
                 // 2. 이미 공유되어 있는지 확인
-                const existingRecord = await getBookSharedRecord(currentOpenAnime);
+                const existingRecord = await getBookSharedRecord(currentOpenWorkKey || currentOpenAnime);
                 
                 if (existingRecord) {
                     // 이미 공유되어 있으면 삭제 (공유 취소)
@@ -1985,7 +2034,8 @@
                     const bookData = {
                         title: currentOpenAnime,
                         questions: questions,
-                        overview: overview
+                        overview: overview,
+                        ...getShareMetadata(currentOpenWorkKey || currentOpenAnime),
                     };
                     
                     if (shareBtn) {
@@ -2244,7 +2294,11 @@
                 });
                 
                 // 공유 기록 저장 (공유 창이 열리면 성공으로 간주)
-                saveSharedRecordToKV(currentOpenAnime, "qa", { q, a }, "image").catch(() => {
+                saveSharedRecordToKV(currentOpenAnime, "qa", {
+                    q,
+                    a,
+                    ...getShareMetadata(currentOpenWorkKey || currentOpenAnime),
+                }, "image").catch(() => {
                     // 실패해도 공유는 계속 진행
                 });
 
@@ -2296,8 +2350,11 @@
                 alert("공유할 답변을 먼저 입력해 주세요.");
                 return;
             }
-            const base = window.location.origin + "/share.html";
-            const shareUrl = base + "?title=" + encodeURIComponent(currentOpenAnime) + "&a=" + encodeURIComponent(a);
+            const q = (item.q || "").trim();
+            const shareUrl = buildSharedBookUrl(currentOpenWorkKey || currentOpenAnime, {
+                q,
+                a,
+            });
             if (shareUrl.length > 1800) {
                 alert("내용이 너무 길어 링크 공유가 어렵습니다. 이미지로 공유해 주세요.");
                 return;
@@ -2311,9 +2368,13 @@
                 window.Kakao.Share.sendScrap({ requestUrl: shareUrl });
                 
                 // 공유 기록 저장 (공유 창이 열리면 성공으로 간주)
-                saveSharedRecordToKV(currentOpenAnime, "qa", { q, a }, "link").catch(() => {
-                    // 실패해도 공유는 계속 진행
-                });
+            saveSharedRecordToKV(currentOpenAnime, "qa", {
+                q,
+                a,
+                ...getShareMetadata(currentOpenWorkKey || currentOpenAnime),
+            }, "link").catch(() => {
+                // 실패해도 공유는 계속 진행
+            });
             } catch (err) {
                 alert("공유 중 오류: " + (err?.message || String(err)));
             }

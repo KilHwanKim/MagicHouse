@@ -13,6 +13,52 @@ function sendSharedRecordsUnavailable(res) {
   });
 }
 
+function slugifySegment(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9가-힣]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-{2,}/g, "-");
+}
+
+function buildRecordSlug(title, sampleRecord) {
+  const mediaType = sampleRecord?.data?.mediaType || sampleRecord?.data?.type || "";
+  const workId = sampleRecord?.data?.workId || "";
+  const titleSlug = slugifySegment(title) || "record";
+
+  if (mediaType && workId) {
+    return `${titleSlug}--${slugifySegment(mediaType)}--${workId}`;
+  }
+
+  return titleSlug;
+}
+
+function decorateRecordsWithSlug(records, title) {
+  const slug = buildRecordSlug(title, records[0]);
+  return (records || []).map((record) => ({
+    ...record,
+    slug,
+  }));
+}
+
+async function getRecordsBySlug(slug) {
+  const keys = await kv.keys(`${KV_PREFIX}*`);
+  for (const key of keys) {
+    const title = key.replace(KV_PREFIX, "");
+    const records = await kv.get(key);
+    if (!Array.isArray(records) || records.length === 0) {
+      continue;
+    }
+
+    if (buildRecordSlug(title, records[0]) === slug) {
+      return { title, records };
+    }
+  }
+
+  return { title: null, records: [] };
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
@@ -108,13 +154,25 @@ export default async function handler(req, res) {
         return sendSharedRecordsUnavailable(res);
       }
 
-      const { title } = req.query;
+      const { title, slug } = req.query;
       
       if (title) {
         // 특정 작품의 기록만 조회
         const key = `${KV_PREFIX}${title}`;
         const records = await kv.get(key);
-        return res.json({ records: Array.isArray(records) ? records : [] });
+        const safeRecords = Array.isArray(records) ? records : [];
+        return res.json({
+          title,
+          slug: buildRecordSlug(String(title), safeRecords[0]),
+          records: decorateRecordsWithSlug(safeRecords, String(title)),
+        });
+      } else if (slug) {
+        const result = await getRecordsBySlug(String(slug));
+        return res.json({
+          title: result.title,
+          slug: String(slug),
+          records: result.title ? decorateRecordsWithSlug(result.records, result.title) : [],
+        });
       } else {
         // 모든 작품의 기록 조회
         const keys = await kv.keys(`${KV_PREFIX}*`);
@@ -124,8 +182,9 @@ export default async function handler(req, res) {
           const records = await kv.get(key);
           if (Array.isArray(records)) {
             const titleFromKey = key.replace(KV_PREFIX, "");
+            const slugValue = buildRecordSlug(titleFromKey, records[0]);
             records.forEach((record) => {
-              allRecords.push({ ...record, title: titleFromKey });
+              allRecords.push({ ...record, title: titleFromKey, slug: slugValue });
             });
           }
         }
