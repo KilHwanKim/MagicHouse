@@ -52,6 +52,7 @@ test("serves config defaults", async () => {
   assert.equal(response.status, 200);
   assert.deepEqual(body, {
     kakaoJsKey: "",
+    promotion: null,
     features: {
       tmdbSearch: false,
       aiQuestions: false,

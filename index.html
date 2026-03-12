@@ -535,6 +535,42 @@
         .share-card-q { font-size: 15px; font-weight: bold; color: #4a342e; margin-bottom: 12px; line-height: 1.5; }
         .share-card-a { font-size: 14px; line-height: 1.6; color: #36241a; white-space: pre-wrap; word-break: break-word; overflow: visible; }
         .share-card-brand { margin-top: 20px; font-size: 11px; color: rgba(54, 36, 26, 0.6); letter-spacing: 0.1em; }
+        .promo-banner {
+            display: none;
+            margin: 0 16px 24px;
+            padding: 20px 24px;
+            border: 1px solid rgba(197, 160, 89, 0.28);
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.92), rgba(41, 29, 16, 0.88));
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+        }
+        .promo-banner.visible { display: flex; }
+        .promo-banner-label {
+            font-size: 10px;
+            letter-spacing: 0.24em;
+            text-transform: uppercase;
+            color: rgba(229, 190, 110, 0.9);
+            font-weight: bold;
+        }
+        .promo-banner-title {
+            font-size: 1.4rem;
+            color: #f8f0dd;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .promo-banner-body {
+            margin-top: 10px;
+            color: rgba(236, 229, 216, 0.88);
+            line-height: 1.7;
+            font-size: 0.95rem;
+        }
+        .promo-banner-cta {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 16px;
+            text-decoration: none;
+        }
     </style>
 </head>
 <body class="p-4 md:p-10 pt-10">
@@ -554,6 +590,15 @@
                 <a id="shared-library-link" href="/share.html" class="gold-btn text-[10px] tracking-widest px-4 py-2 no-underline" title="다른 사람들이 공유한 책 보기">📚 공유된 서고</a>
                 <a href="https://docs.google.com/forms/d/e/1FAIpQLSdh7hu20jRqcRAAGs0klcdO0mKaGnw2MDd7GmVI3I4uiJBb-A/viewform" target="_blank" rel="noopener noreferrer" class="gold-btn text-[10px] tracking-widest px-4 py-2 no-underline" title="개선사항·에러 피드백 보내기">💬 피드백</a>
                 <button id="site-share-btn" type="button" onclick="shareSiteFeed()" class="gold-btn text-[10px] tracking-widest px-4 py-2" title="사이트를 카카오톡으로 공유">📤 사이트 공유</button>
+            </div>
+        </div>
+
+        <div id="promo-banner" class="promo-banner">
+            <div class="flex-1 min-w-0">
+                <div id="promo-banner-label" class="promo-banner-label">PROMOTION</div>
+                <div id="promo-banner-title" class="promo-banner-title"></div>
+                <div id="promo-banner-body" class="promo-banner-body"></div>
+                <a id="promo-banner-cta" class="gold-btn promo-banner-cta px-5 py-3 text-[11px] tracking-[0.2em]" target="_blank" rel="noopener noreferrer"></a>
             </div>
         </div>
 
@@ -684,6 +729,7 @@
             kakaoLogin: true,
             sharedRecords: true
         };
+        let promotionBanner = null;
 
         function debugLog(...args) {
             if (DEBUG_LOGS) {
@@ -729,6 +775,34 @@
                     : "KV 저장소 설정이 없어 공유 저장을 사용할 수 없습니다."
             );
             setButtonAvailability("shared-library-link", featureAvailability.sharedRecords, "KV 저장소 설정이 없어 공유된 서고를 볼 수 없습니다.");
+        }
+
+        function renderPromotionBanner(promotion) {
+            promotionBanner = promotion || null;
+
+            const banner = document.getElementById("promo-banner");
+            const label = document.getElementById("promo-banner-label");
+            const title = document.getElementById("promo-banner-title");
+            const body = document.getElementById("promo-banner-body");
+            const cta = document.getElementById("promo-banner-cta");
+
+            if (!banner || !label || !title || !body || !cta) return;
+
+            if (!promotionBanner) {
+                banner.classList.remove("visible");
+                title.textContent = "";
+                body.textContent = "";
+                cta.textContent = "";
+                cta.removeAttribute("href");
+                return;
+            }
+
+            label.textContent = promotionBanner.label || "PROMOTION";
+            title.textContent = promotionBanner.title || "";
+            body.textContent = promotionBanner.body || "";
+            cta.textContent = promotionBanner.cta || "바로가기";
+            cta.href = promotionBanner.url || "#";
+            banner.classList.add("visible");
         }
         const IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
         
@@ -2123,6 +2197,7 @@
                 .then(function (data) {
                     kakaoJsKey = (data.kakaoJsKey || "").trim();
                     applyFeatureAvailability(data.features || {});
+                    renderPromotionBanner(data.promotion);
                     tryInitKakao();
                     if (window.Kakao && window.Kakao.Share) kakaoSDKReady = true;
                     
@@ -2146,6 +2221,7 @@
                         kakaoLogin: false,
                         sharedRecords: false
                     });
+                    renderPromotionBanner(null);
                 });
             if (window.Kakao) onKakaoSDKLoaded();
         });

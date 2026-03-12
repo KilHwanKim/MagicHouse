@@ -64,6 +64,30 @@ export default function Home() {
         </div>
       </section>
 
+      {config.promotion ? (
+        <SectionCard
+          title={config.promotion.label}
+          description="현재 앱과 동일한 개념의 프로모션 배너입니다. 환경변수만 채우면 노출됩니다."
+        >
+          <div className="rounded-3xl border border-amber-300/20 bg-gradient-to-r from-amber-300/10 via-orange-300/10 to-transparent p-6">
+            <h2 className="text-2xl font-semibold text-amber-50">
+              {config.promotion.title}
+            </h2>
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-amber-50/85">
+              {config.promotion.body}
+            </p>
+            <a
+              href={config.promotion.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 inline-flex rounded-full border border-amber-300/25 bg-amber-300/15 px-5 py-3 text-sm font-semibold text-amber-50 transition hover:bg-amber-300/20"
+            >
+              {config.promotion.cta}
+            </a>
+          </div>
+        </SectionCard>
+      ) : null}
+
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
         <SectionCard
           title="왜 Next.js 구조를 먼저 까는가"

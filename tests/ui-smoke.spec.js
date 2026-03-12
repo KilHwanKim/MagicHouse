@@ -49,6 +49,7 @@ test("main page disables unavailable actions", async ({ page }) => {
   await expect(page.locator("#conjure-question-btn")).toBeDisabled();
   await expect(page.locator("#share-qa-btn")).toBeDisabled();
   await expect(page.locator("#share-book-btn")).toBeDisabled();
+  await expect(page.locator("#promo-banner")).not.toBeVisible();
 
   const sharedLibraryLink = page.locator("#shared-library-link");
   await expect(sharedLibraryLink).toHaveAttribute("aria-disabled", "true");

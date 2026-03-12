@@ -46,6 +46,7 @@
 - 필수: `TMDB_API_KEY`, `OPENAI_API_KEY`
 - 카카오 공유를 쓸 때: `KAKAO_JS_KEY`, `KAKAO_REST_API_KEY`
 - 공유 기록 저장을 쓸 때: `KV_REST_API_URL`, `KV_REST_API_TOKEN`
+- 직접 만든 광고 배너를 노출하려면: `AD_BANNER_*` 값 입력
 
 ### 2. 설치 및 실행
 
@@ -85,6 +86,7 @@ npm run test:ui
 - 민감한 요청/응답 로그는 기본적으로 비활성화되어 있습니다.
 - 디버그 로그가 필요하면 `.env`에 `DEBUG_LOGS=1`을 설정하세요.
 - Next.js 이관용 초기 구조는 `next-app` 폴더에 별도로 추가되어 있습니다.
+- 현재 앱과 `next-app` 모두 프로모션 배너용 `AD_BANNER_*` 설정을 지원합니다.
 
 ## 프로젝트 배경
 

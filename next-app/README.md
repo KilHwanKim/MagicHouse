@@ -6,6 +6,8 @@ This is the App Router migration starter for MagicHouse.
 2. Install dependencies
 3. Run the development server
 
+`AD_BANNER_*` 값을 채우면 메인 화면에 직접 만든 프로모션 배너가 노출됩니다.
+
 ```bash
 npm install
 npm run dev

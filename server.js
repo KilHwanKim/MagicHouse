@@ -21,9 +21,11 @@ function buildFeatureConfig() {
   const hasKakaoJsKey = Boolean((process.env.KAKAO_JS_KEY || "").trim());
   const hasKakaoRestKey = Boolean((process.env.KAKAO_REST_API_KEY || "").trim());
   const hasKvConfig = Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+  const promotion = buildPromotionConfig();
 
   return {
     kakaoJsKey: process.env.KAKAO_JS_KEY || "",
+    promotion,
     features: {
       tmdbSearch: Boolean(process.env.TMDB_API_KEY),
       aiQuestions: Boolean(process.env.OPENAI_API_KEY),
@@ -31,6 +33,26 @@ function buildFeatureConfig() {
       kakaoLogin: hasKakaoJsKey && hasKakaoRestKey,
       sharedRecords: hasKvConfig,
     },
+  };
+}
+
+function buildPromotionConfig() {
+  const enabled = process.env.AD_BANNER_ENABLED === "1";
+  const title = (process.env.AD_BANNER_TITLE || "").trim();
+  const body = (process.env.AD_BANNER_BODY || "").trim();
+  const cta = (process.env.AD_BANNER_CTA || "").trim();
+  const url = (process.env.AD_BANNER_URL || "").trim();
+
+  if (!enabled || !title || !body || !cta || !url) {
+    return null;
+  }
+
+  return {
+    label: (process.env.AD_BANNER_LABEL || "PROMOTION").trim() || "PROMOTION",
+    title,
+    body,
+    cta,
+    url,
   };
 }
 
