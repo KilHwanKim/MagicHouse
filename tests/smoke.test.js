@@ -50,7 +50,16 @@ test("serves config defaults", async () => {
   const body = await response.json();
 
   assert.equal(response.status, 200);
-  assert.deepEqual(body, { kakaoJsKey: "" });
+  assert.deepEqual(body, {
+    kakaoJsKey: "",
+    features: {
+      tmdbSearch: false,
+      aiQuestions: false,
+      kakaoShare: false,
+      kakaoLogin: false,
+      sharedRecords: false,
+    },
+  });
 });
 
 test("validates kakao token request", async () => {

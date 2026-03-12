@@ -17,6 +17,23 @@ function debugLog(...args) {
   }
 }
 
+function buildFeatureConfig() {
+  const hasKakaoJsKey = Boolean((process.env.KAKAO_JS_KEY || "").trim());
+  const hasKakaoRestKey = Boolean((process.env.KAKAO_REST_API_KEY || "").trim());
+  const hasKvConfig = Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+
+  return {
+    kakaoJsKey: process.env.KAKAO_JS_KEY || "",
+    features: {
+      tmdbSearch: Boolean(process.env.TMDB_API_KEY),
+      aiQuestions: Boolean(process.env.OPENAI_API_KEY),
+      kakaoShare: hasKakaoJsKey,
+      kakaoLogin: hasKakaoJsKey && hasKakaoRestKey,
+      sharedRecords: hasKvConfig,
+    },
+  };
+}
+
 app.use(express.json());
 
 // 정적 파일: 프로젝트 루트 + tests (Vercel은 buildCommand 없이 루트를 정적 서빙)
@@ -25,9 +42,7 @@ app.use("/tests", express.static(path.join(__dirname, "tests")));
 
 // 카카오 공유용 설정 (클라이언트에서 사용)
 app.get("/api/config", (req, res) => {
-  res.json({
-    kakaoJsKey: process.env.KAKAO_JS_KEY || "",
-  });
+  res.json(buildFeatureConfig());
 });
 
 // 카카오 로그인: 인가 코드를 액세스 토큰으로 교환

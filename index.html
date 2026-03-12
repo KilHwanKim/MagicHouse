@@ -551,9 +551,9 @@
                 <span id="book-count" class="text-[10px] bg-stone-900 text-stone-500 px-3 py-1 border border-stone-800 font-bold uppercase tracking-widest">Volumes: 0</span>
             </div>
             <div class="flex gap-2">
-                <a href="/share.html" class="gold-btn text-[10px] tracking-widest px-4 py-2 no-underline" title="다른 사람들이 공유한 책 보기">📚 공유된 서고</a>
+                <a id="shared-library-link" href="/share.html" class="gold-btn text-[10px] tracking-widest px-4 py-2 no-underline" title="다른 사람들이 공유한 책 보기">📚 공유된 서고</a>
                 <a href="https://docs.google.com/forms/d/e/1FAIpQLSdh7hu20jRqcRAAGs0klcdO0mKaGnw2MDd7GmVI3I4uiJBb-A/viewform" target="_blank" rel="noopener noreferrer" class="gold-btn text-[10px] tracking-widest px-4 py-2 no-underline" title="개선사항·에러 피드백 보내기">💬 피드백</a>
-                <button type="button" onclick="shareSiteFeed()" class="gold-btn text-[10px] tracking-widest px-4 py-2" title="사이트를 카카오톡으로 공유">📤 사이트 공유</button>
+                <button id="site-share-btn" type="button" onclick="shareSiteFeed()" class="gold-btn text-[10px] tracking-widest px-4 py-2" title="사이트를 카카오톡으로 공유">📤 사이트 공유</button>
             </div>
         </div>
 
@@ -561,7 +561,7 @@
         <div class="shelf-container">
             <div class="shelf-row">
                 <div id="shelf-1" class="books-wrapper">
-                    <div class="grimoire grimoire-add" onclick="openTmdbSearchModal()" title="새로운 마법 기록 연성">+</div>
+                    <div id="add-work-btn" class="grimoire grimoire-add" onclick="openTmdbSearchModal()" title="새로운 마법 기록 연성">+</div>
                 </div>
                 <div class="stone-stair"></div>
             </div>
@@ -604,7 +604,7 @@
                     </div>
                     <div class="flex gap-2 ml-auto">
                         <button onclick="addCustomQuestion()" class="gold-btn text-[10px] px-3 py-2">✍️ 질문 직접 연성</button>
-                        <button onclick="conjureNewQuestion()" class="gold-btn text-[10px] px-3 py-2">✨ 새 질문 연성</button>
+                        <button id="conjure-question-btn" onclick="conjureNewQuestion()" class="gold-btn text-[10px] px-3 py-2">✨ 새 질문 연성</button>
                     </div>
                 </div>
             </div>
@@ -677,11 +677,58 @@
         const API_BASE = window.location.origin;
         const DEBUG_LOGS = new URLSearchParams(window.location.search).get("debug") === "1"
             || localStorage.getItem("magic_house_debug") === "1";
+        let featureAvailability = {
+            tmdbSearch: true,
+            aiQuestions: true,
+            kakaoShare: true,
+            kakaoLogin: true,
+            sharedRecords: true
+        };
 
         function debugLog(...args) {
             if (DEBUG_LOGS) {
                 console.log(...args);
             }
+        }
+
+        function setButtonAvailability(elementId, enabled, disabledTitle) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+
+            const isLink = element.tagName === "A";
+            if (isLink) {
+                element.style.pointerEvents = enabled ? "" : "none";
+                element.style.opacity = enabled ? "" : "0.5";
+                element.setAttribute("aria-disabled", enabled ? "false" : "true");
+            } else {
+                element.disabled = !enabled;
+                element.style.opacity = enabled ? "" : "0.5";
+            }
+
+            if (!element.dataset.originalTitle) {
+                element.dataset.originalTitle = element.title || "";
+            }
+            element.title = enabled ? element.dataset.originalTitle : disabledTitle;
+        }
+
+        function applyFeatureAvailability(features = {}) {
+            featureAvailability = {
+                ...featureAvailability,
+                ...features
+            };
+
+            setButtonAvailability("add-work-btn", featureAvailability.tmdbSearch, "TMDB API 키가 설정되지 않아 작품 검색을 사용할 수 없습니다.");
+            setButtonAvailability("conjure-question-btn", featureAvailability.aiQuestions, "OpenAI API 키가 설정되지 않아 AI 질문 생성을 사용할 수 없습니다.");
+            setButtonAvailability("site-share-btn", featureAvailability.kakaoShare, "KAKAO_JS_KEY가 설정되지 않아 카카오 공유를 사용할 수 없습니다.");
+            setButtonAvailability("share-qa-btn", featureAvailability.kakaoShare, "KAKAO_JS_KEY가 설정되지 않아 카카오 공유를 사용할 수 없습니다.");
+            setButtonAvailability(
+                "share-book-btn",
+                featureAvailability.kakaoLogin && featureAvailability.sharedRecords,
+                !featureAvailability.kakaoLogin
+                    ? "카카오 로그인 설정이 없어 공유 저장을 사용할 수 없습니다."
+                    : "KV 저장소 설정이 없어 공유 저장을 사용할 수 없습니다."
+            );
+            setButtonAvailability("shared-library-link", featureAvailability.sharedRecords, "KV 저장소 설정이 없어 공유된 서고를 볼 수 없습니다.");
         }
         const IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
         
@@ -1087,6 +1134,11 @@
         }
 
         async function conjureNewQuestion() {
+            if (!featureAvailability.aiQuestions) {
+                alert("OpenAI API 키가 설정되지 않아 AI 질문 생성을 사용할 수 없습니다.");
+                return;
+            }
+
             saveCurrentAnswer();
             
             const btn = event.currentTarget;
@@ -1219,6 +1271,10 @@
 
         // TMDB 검색 모달 관련 함수들
         function openTmdbSearchModal() {
+            if (!featureAvailability.tmdbSearch) {
+                alert("TMDB API 키가 설정되지 않아 작품 검색을 사용할 수 없습니다.");
+                return;
+            }
             document.getElementById('tmdb-search-modal').style.display = 'flex';
             document.getElementById('tmdb-search-input').focus();
         }
@@ -1643,6 +1699,12 @@
 
         // ========== 책 전체 공유 함수 (토글 방식) ==========
         async function shareBookToKV() {
+            if (!featureAvailability.kakaoLogin || !featureAvailability.sharedRecords) {
+                alert(!featureAvailability.kakaoLogin
+                    ? "카카오 로그인 설정이 없어 공유 저장을 사용할 수 없습니다."
+                    : "공유 저장소 설정이 없어 공유 저장을 사용할 수 없습니다.");
+                return;
+            }
             // 0. 카카오 로그인 확인
             try {
                 debugLog('[공유 시작] 카카오 로그인 확인 중...');
@@ -1807,6 +1869,10 @@
         }
 
         function shareSiteFeed() {
+            if (!featureAvailability.kakaoShare) {
+                alert("카카오 공유 설정이 없어 사이트 공유를 사용할 수 없습니다.");
+                return;
+            }
             if (!kakaoSDKReady) {
                 alert("카카오 SDK가 아직 준비되지 않았습니다. 잠시 후 다시 시도하세요.");
                 return;
@@ -1855,6 +1921,10 @@
 
         async function shareQuestionAnswerFeed() {
             saveCurrentAnswer();
+            if (!featureAvailability.kakaoShare) {
+                alert("카카오 공유 설정이 없어 질문 공유를 사용할 수 없습니다.");
+                return;
+            }
             if (!kakaoSDKReady) {
                 alert("카카오 SDK가 아직 준비되지 않았습니다. 잠시 후 다시 시도하세요.");
                 return;
@@ -2052,6 +2122,7 @@
                 })
                 .then(function (data) {
                     kakaoJsKey = (data.kakaoJsKey || "").trim();
+                    applyFeatureAvailability(data.features || {});
                     tryInitKakao();
                     if (window.Kakao && window.Kakao.Share) kakaoSDKReady = true;
                     
@@ -2068,6 +2139,13 @@
                 })
                 .catch(function (e) {
                     console.warn("[카카오] 설정 로드 실패:", e);
+                    applyFeatureAvailability({
+                        tmdbSearch: false,
+                        aiQuestions: false,
+                        kakaoShare: false,
+                        kakaoLogin: false,
+                        sharedRecords: false
+                    });
                 });
             if (window.Kakao) onKakaoSDKLoaded();
         });
