@@ -19,8 +19,11 @@ Open `http://localhost:3000` to see the scaffold.
 
 - `/` – migration landing page
 - `/migration` – phased migration checklist
+- `/lab` – TMDB 검색 / AI 질문 생성 실험실
 - `/share` – shared library placeholder
 - `/api/config` – feature availability JSON for server/client UI gating
+- `/api/tmdb/search` – Next Route Handler 기반 TMDB 검색
+- `/api/generate-questions` – Next Route Handler 기반 AI 질문 생성
 
 ## Validation
 

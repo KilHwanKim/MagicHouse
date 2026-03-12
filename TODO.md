@@ -11,8 +11,8 @@
 
 ## 다음 우선순위
 
-- [ ] TMDB 검색을 `next-app`으로 이관
-- [ ] AI 질문 생성 API를 `next-app` Route Handler로 이관
+- [x] TMDB 검색을 `next-app`으로 이관
+- [x] AI 질문 생성 API를 `next-app` Route Handler로 이관
 - [ ] 작품/질문/답변 데이터 모델을 `title` 기반에서 `workId` 기반으로 변경
 - [ ] 공유 링크를 slug 기반 공개 페이지로 변경
 - [ ] 로그인 구조를 카카오 의존형에서 이메일/Google 중심으로 재설계

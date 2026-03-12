@@ -60,6 +60,12 @@ export default function Home() {
             >
               공유 서고 화면 초안
             </Link>
+            <Link
+              href="/lab"
+              className="rounded-full border border-emerald-300/30 bg-emerald-400/15 px-5 py-3 text-sm font-semibold text-emerald-50 transition hover:bg-emerald-400/20"
+            >
+              API 실험실
+            </Link>
           </div>
         </div>
       </section>
