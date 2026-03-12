@@ -3,3 +3,5 @@ node_modules/
 .vercel
 .cursorrules
 .env.example
+test-results/
+playwright-report/

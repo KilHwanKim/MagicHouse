@@ -34,6 +34,17 @@ function buildFeatureConfig() {
   };
 }
 
+function hasSharedRecordsConfig() {
+  return Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+}
+
+function sendSharedRecordsUnavailable(res) {
+  return res.status(503).json({
+    error: "Shared records storage is not configured",
+    code: "SHARED_RECORDS_UNAVAILABLE",
+  });
+}
+
 app.use(express.json());
 
 // 정적 파일: 프로젝트 루트 + tests (Vercel은 buildCommand 없이 루트를 정적 서빙)
@@ -413,6 +424,10 @@ app.post("/api/shared-records", async (req, res) => {
       return res.status(400).json({ error: "userId is required" });
     }
 
+    if (!hasSharedRecordsConfig()) {
+      return sendSharedRecordsUnavailable(res);
+    }
+
     const recordId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
     const record = {
       id: recordId,
@@ -446,6 +461,10 @@ app.post("/api/shared-records", async (req, res) => {
 // 공유 기록 조회 (작품별 또는 전체)
 app.get("/api/shared-records", async (req, res) => {
   try {
+    if (!hasSharedRecordsConfig()) {
+      return sendSharedRecordsUnavailable(res);
+    }
+
     const { title } = req.query;
     
     if (title) {
@@ -487,6 +506,10 @@ app.delete("/api/shared-records", async (req, res) => {
       return res.status(400).json({ error: "title, recordId, and userId are required" });
     }
 
+    if (!hasSharedRecordsConfig()) {
+      return sendSharedRecordsUnavailable(res);
+    }
+
     const key = `${KV_PREFIX}${title}`;
     const records = await kv.get(key);
     
@@ -519,6 +542,10 @@ app.delete("/api/shared-records", async (req, res) => {
 // 작품 목록 조회 (공유 기록이 있는 작품들)
 app.get("/api/shared-records/titles", async (req, res) => {
   try {
+    if (!hasSharedRecordsConfig()) {
+      return sendSharedRecordsUnavailable(res);
+    }
+
     const keys = await kv.keys(`${KV_PREFIX}*`);
     const titles = [];
     

@@ -2,6 +2,10 @@ import { kv } from "@vercel/kv";
 
 const KV_PREFIX = "shared_records:";
 
+function hasSharedRecordsConfig() {
+  return Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -12,6 +16,13 @@ export default async function handler(req, res) {
   
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  if (!hasSharedRecordsConfig()) {
+    return res.status(503).json({
+      error: "Shared records storage is not configured",
+      code: "SHARED_RECORDS_UNAVAILABLE",
+    });
   }
 
   try {

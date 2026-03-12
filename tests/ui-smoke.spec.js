@@ -1,0 +1,64 @@
+import { once } from "node:events";
+import { test, expect } from "@playwright/test";
+
+for (const key of [
+  "TMDB_API_KEY",
+  "OPENAI_API_KEY",
+  "KAKAO_JS_KEY",
+  "KAKAO_REST_API_KEY",
+  "KAKAO_CLIENT_SECRET",
+  "KV_REST_API_URL",
+  "KV_REST_API_TOKEN",
+]) {
+  delete process.env[key];
+}
+
+process.env.VERCEL = "1";
+
+const { default: app } = await import("../server.js");
+
+let server;
+let baseUrl;
+
+test.beforeAll(async () => {
+  server = app.listen(0);
+  await once(server, "listening");
+  const address = server.address();
+  baseUrl = `http://127.0.0.1:${address.port}`;
+});
+
+test.afterAll(async () => {
+  if (!server) return;
+
+  await new Promise((resolve, reject) => {
+    server.close((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      resolve();
+    });
+  });
+});
+
+test("main page disables unavailable actions", async ({ page }) => {
+  await page.goto(baseUrl);
+
+  await expect(page.locator("#site-share-btn")).toBeDisabled();
+  await expect(page.locator("#conjure-question-btn")).toBeDisabled();
+  await expect(page.locator("#share-qa-btn")).toBeDisabled();
+  await expect(page.locator("#share-book-btn")).toBeDisabled();
+
+  const sharedLibraryLink = page.locator("#shared-library-link");
+  await expect(sharedLibraryLink).toHaveAttribute("aria-disabled", "true");
+});
+
+test("share page explains when shared records are unavailable", async ({ page }) => {
+  await page.goto(`${baseUrl}/share.html`);
+
+  await expect(page.locator(".empty-state")).toContainText("공유 저장소가 아직 설정되지 않았습니다");
+  await expect(page.locator("#tab-random")).toBeDisabled();
+  await expect(page.locator("#tab-by-title")).toBeDisabled();
+  await expect(page.locator("#tab-my-books")).toBeDisabled();
+});

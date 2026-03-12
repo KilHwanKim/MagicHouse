@@ -113,3 +113,39 @@ test("validates shared-record payload before KV access", async () => {
   assert.equal(response.status, 400);
   assert.equal(body.error, "title, type, data are required");
 });
+
+test("reports unavailable shared-records storage on read", async () => {
+  const response = await fetch(`${baseUrl}/api/shared-records`);
+  const body = await response.json();
+
+  assert.equal(response.status, 503);
+  assert.equal(body.error, "Shared records storage is not configured");
+  assert.equal(body.code, "SHARED_RECORDS_UNAVAILABLE");
+});
+
+test("reports unavailable shared-records storage on titles", async () => {
+  const response = await fetch(`${baseUrl}/api/shared-records/titles`);
+  const body = await response.json();
+
+  assert.equal(response.status, 503);
+  assert.equal(body.error, "Shared records storage is not configured");
+  assert.equal(body.code, "SHARED_RECORDS_UNAVAILABLE");
+});
+
+test("reports unavailable shared-records storage on valid save", async () => {
+  const response = await fetch(`${baseUrl}/api/shared-records`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      title: "Test Title",
+      type: "book",
+      data: { questions: [] },
+      userId: "test-user",
+    }),
+  });
+  const body = await response.json();
+
+  assert.equal(response.status, 503);
+  assert.equal(body.error, "Shared records storage is not configured");
+  assert.equal(body.code, "SHARED_RECORDS_UNAVAILABLE");
+});

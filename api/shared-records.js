@@ -2,6 +2,17 @@ import { kv } from "@vercel/kv";
 
 const KV_PREFIX = "shared_records:";
 
+function hasSharedRecordsConfig() {
+  return Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+}
+
+function sendSharedRecordsUnavailable(res) {
+  return res.status(503).json({
+    error: "Shared records storage is not configured",
+    code: "SHARED_RECORDS_UNAVAILABLE",
+  });
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
@@ -22,6 +33,10 @@ export default async function handler(req, res) {
       
       if (!userId) {
         return res.status(400).json({ error: "userId is required" });
+      }
+
+      if (!hasSharedRecordsConfig()) {
+        return sendSharedRecordsUnavailable(res);
       }
 
       const recordId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
@@ -58,6 +73,10 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "title, recordId, and userId are required" });
       }
 
+      if (!hasSharedRecordsConfig()) {
+        return sendSharedRecordsUnavailable(res);
+      }
+
       const key = `${KV_PREFIX}${title}`;
       const records = await kv.get(key);
       
@@ -85,6 +104,10 @@ export default async function handler(req, res) {
 
     // GET: 공유 기록 조회 (작품별 또는 전체)
     if (req.method === "GET") {
+      if (!hasSharedRecordsConfig()) {
+        return sendSharedRecordsUnavailable(res);
+      }
+
       const { title } = req.query;
       
       if (title) {
