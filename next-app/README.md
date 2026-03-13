@@ -17,7 +17,7 @@ Open `http://localhost:3000` to see the scaffold.
 
 ## Available routes
 
-- `/` – migration landing page
+- `/` – 책장형 메인 UI 이식판 (데모 서고 포함)
 - `/auth` – 이메일/Google 중심 인증 이관 페이지
 - `/campaigns` – 유입 실험 랜딩 모음
 - `/migration` – phased migration checklist
