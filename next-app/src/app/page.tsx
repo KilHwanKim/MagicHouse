@@ -72,6 +72,12 @@ export default function Home() {
             >
               인증 이관
             </Link>
+            <Link
+              href="/campaigns"
+              className="rounded-full border border-amber-300/30 bg-amber-400/15 px-5 py-3 text-sm font-semibold text-amber-50 transition hover:bg-amber-400/20"
+            >
+              유입 실험
+            </Link>
           </div>
         </div>
       </section>

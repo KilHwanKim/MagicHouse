@@ -27,11 +27,17 @@
 
 ## 실험 체크리스트
 
-- [ ] 채널별 랜딩 문구 2종 작성
+- [x] 채널별 랜딩 문구 2종 작성
 - [ ] 프로모션 배너 문구 A/B 2종 작성
 - [ ] 피드백 폼 질문 5개 이내로 정리
-- [ ] 첫 유입 링크에 UTM 파라미터 설계
+- [x] 첫 유입 링크에 UTM 파라미터 설계
 - [ ] 운영 지표 웹훅 연결
+
+## 현재 구현 상태
+
+- `next-app/src/app/campaigns/page.tsx`에서 실험 랜딩 목록 제공
+- `next-app/src/app/campaigns/[slug]/page.tsx`에서 채널별 랜딩 페이지 제공
+- `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`를 `/api/metrics`로 전송
 
 ## 추천 시작 순서
 

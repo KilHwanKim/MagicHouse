@@ -19,6 +19,7 @@ Open `http://localhost:3000` to see the scaffold.
 
 - `/` – migration landing page
 - `/auth` – 이메일/Google 중심 인증 이관 페이지
+- `/campaigns` – 유입 실험 랜딩 모음
 - `/migration` – phased migration checklist
 - `/lab` – TMDB 검색 / AI 질문 생성 실험실
 - `/share` – shared library placeholder
